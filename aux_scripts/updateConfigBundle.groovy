@@ -1,4 +1,4 @@
-/* :name = Update Customisation Bundle :description = 
+/* :name = Update Customisation Bundle (local) :description = 
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
@@ -65,9 +65,12 @@ def nonInstallNames = "" //same, but only names
 def winDel = false
 def deleteJars = """@echo off
 title OmegaT Customisation Update
-mode 40,10
+mode 52,5
+echo Waiting for OmegaT to quit.
+echo Do not close this window.
+echo It will close automatically when OmegaT exits.
+echo You may need to switch to OmegaT and press OK there.
 :loop
-echo Waiting for OmegaT to quit. Do not close this window.
 tasklist | find " $omtPid " >nul
 if not errorlevel 1 (
     timeout /t 2 >nul
@@ -128,6 +131,7 @@ storeUrl = {
             title:"Update Bundle Remote Location",
             show:true,
             pack:true,
+            size:[350,100],
             preferredSize:[400,100],
             locationRelativeTo:null,
             defaultCloseOperation:WC.DISPOSE_ON_CLOSE

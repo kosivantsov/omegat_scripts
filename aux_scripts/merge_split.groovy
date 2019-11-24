@@ -1,9 +1,11 @@
-/** :name=  Merge or split segments :description= \
- *          Merge current segment with the next or split it at the selection
+/* :name=  Merge or split segments :description= \
+ *         Merge current segment with the next or split it at the selection
  * 
  * @author  Yu Tang, Dimitry Prihodko, Kos Ivantsov
- * @date    2017-01-04
- * @version 0.4.11
+ * @date    2019-11-23
+ * @version 0.4.12
+ *
+ *         Make sure to use this script with its .properties file
  */
 import org.apache.commons.lang.WordUtils
 import org.omegat.core.segmentation.MapRule
@@ -47,8 +49,10 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     }
 
     //get fragments to split or merge
+    def nxtEntry = project.allEntries[entry.entryNum()]
+    String nextSeg = entry.key.next ? entry.key.next : nxtEntry.srcText
     String beforeBreak = split ? src - sel : entry.srcText
-    String afterBreak = split ? sel : entry.key.next
+    String afterBreak = split ? sel : nextSeg
 
 
     // exists check for the MappingRule
@@ -174,7 +178,8 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
                                                     // converted twice
             text = text.replaceAll("\\*", "\\\\S*");
         }
-
+        //make tags optional
+        text = text.replaceAll(/(\\\<\/?\w+\d+\s?\/?\\\>)/, /\($1\)\?/) 
         return text;
     }
 
@@ -192,6 +197,9 @@ boolean isReadyForNewRule() {
 
     def entry = editor.currentEntry
     def src = entry.srcText
+    def allProjEntries = project.allEntries
+    def nxtEntry = allProjEntries[entry.entryNum()]
+    String nextSeg = entry.key.next ? entry.key.next : nxtEntry.srcText
     def split
     def sel
     if (editor.selectedText) {
@@ -200,7 +208,7 @@ boolean isReadyForNewRule() {
     }
     split = split ? true :false
 
-    if (! split && (! entry.srcText || ! entry.key.next)) {
+    if (! split && (! entry.srcText || ! nextSeg)) {
         message = res.getString("noMerge") + res.getString("terminating")
         return message.alert()
     }

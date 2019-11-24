@@ -5,7 +5,7 @@
  * @date    2019-11-23
  * @version 0.4.12
  *
- *         Make sure to use this script with its .properties file
+ *         !!! Make sure that this script is used with its .properties file !!!
  */
 import org.apache.commons.lang.WordUtils
 import org.omegat.core.segmentation.MapRule

@@ -3,7 +3,7 @@
  * 
  * @author:  Kos Ivantsov
  * @date:    2019-12-21
- * @version: 0.4.3
+ * @version: 0.4.4
  */
 
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
@@ -488,51 +488,43 @@ if (update != 0) {
             finalMsg += "\nYour scripts have been updated."
         } else {
             message = """Scripts folder is not writable.
-This customisation update utility can copy
+This customisation update utility will copy
 all the installed scripts into a writable folder
-and set it as a new Script folder. Do you want to do that?"""
+and set it as a new Script folder."""
             logEcho(message)
-            if (message.confirm() == 0) {
-                logEcho("Action confirmed.")
-                newScriptsDir = new File(confDir.toString() + File.separator + "scripts")
-                if (! newScriptsDir.exists()) {
-                    newScriptsDir.mkdirs()
-                    logEcho("$newScriptsDir is created.")
-                }
-                if (scriptsDir.exists()) {
-                    FileUtils.copyDirectoryToDirectory(scriptsDir, new File(confDir))
-                    logEcho("Copied files from $scriptsDir to $newScriptsDir.")
-                } else {
-                    logEcho("$scriptsDir is specified but does not actually exist.")
-                }
-                FileUtils.copyDirectory(tmpScriptsDir, newScriptsDir)
-                logEcho("Copied scripts provided in the customisation bundle.")
-                delDir(tmpScriptsDir)
-                finalMsg += "\nYour scripts have been updated."
-                newSDText = newScriptsDir.toString().replaceAll('\\\\', "\\\\\\\\")
-                Preferences.setPreference(Preferences.SCRIPTS_DIRECTORY, newScriptsDir)
-                logEcho("New Scripts folder is set to ${newScriptsDir}.")
-                if (! localPrefFile.exists()) {
-                    writePref = """<?xml version="1.0" encoding="UTF-8" ?>
+            newScriptsDir = new File(confDir.toString() + File.separator + "scripts")
+            if (! newScriptsDir.exists()) {
+                newScriptsDir.mkdirs()
+                logEcho("$newScriptsDir is created.")
+            }
+            if (scriptsDir.exists()) {
+                FileUtils.copyDirectoryToDirectory(scriptsDir, new File(confDir))
+                logEcho("Copied files from $scriptsDir to $newScriptsDir.")
+            } else {
+                logEcho("$scriptsDir is specified but does not actually exist.")
+            }
+            FileUtils.copyDirectory(tmpScriptsDir, newScriptsDir)
+            logEcho("Copied scripts provided in the customisation bundle.")
+            delDir(tmpScriptsDir)
+            finalMsg += "\nYour scripts have been updated."
+            newSDText = newScriptsDir.toString().replaceAll('\\\\', "\\\\\\\\")
+            Preferences.setPreference(Preferences.SCRIPTS_DIRECTORY, newScriptsDir)
+            logEcho("New Scripts folder is set to ${newScriptsDir}.")
+            if (! localPrefFile.exists()) {
+                writePref = """<?xml version="1.0" encoding="UTF-8" ?>
 <omegat>
-  <preference version="1.0">
-    <scripts_dir>${newSDText}</scripts_dir>
-  </preference>
+<preference version="1.0">
+<scripts_dir>${newSDText}</scripts_dir>
+</preference>
 </omegat>
 """
-                } else {
-                    writePref = localPrefFile.text.findAll(/<scripts_dir>.+<\/scripts_dir>/) ?
-                    localPrefFile.text.replaceAll(/<scripts_dir>.+<\/scripts_dir>/, "\\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>") :
-                    localPrefFile.text.replaceAll(/>\n  <\/preference>/, "\\>\n    \\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>\n  \\<\\/preference\\>")
-                }
-                localPrefFile.write(writePref, "UTF-8")
-                success++
             } else {
-                logEcho("Action declined.")
-                logEcho("Scripts folder has not been changed.\n  Scripts will not be updated.")
-                incomplUpd++
-                finalMsg += "\nYou scripts could not be updated. Get in touch with support for assistance."
+                writePref = localPrefFile.text.findAll(/<scripts_dir>.+<\/scripts_dir>/) ?
+                localPrefFile.text.replaceAll(/<scripts_dir>.+<\/scripts_dir>/, "\\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>") :
+                localPrefFile.text.replaceAll(/>\n  <\/preference>/, "\\>\n    \\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>\n  \\<\\/preference\\>")
             }
+            localPrefFile.write(writePref, "UTF-8")
+            success++
         }
         printDone()
         printSep()

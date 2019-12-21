@@ -1,10 +1,13 @@
-/* :name = Update Customisation Bundle (local) :description = 
+/* :name = Update Customisation Bundle :description =
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
- * @date:    2019-11-23
- * @version: 0.4.2
+ * @date:    2019-12-21
+ * @version: 0.4.3
  */
+
+def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
+
 import groovy.swing.SwingBuilder
 import groovy.util.XmlSlurper
 import java.awt.FlowLayout
@@ -63,6 +66,7 @@ def readOnlyJars = "" //list of installed jars in read-only /plugins
 def nonInstallJars = "" //list of jars not to be installed because older version resides in read-only /plugins
 def nonInstallNames = "" //same, but only names
 def winDel = false
+def openInstPlugDir = false
 def deleteJars = """@echo off
 title OmegaT Customisation Update
 mode 52,5
@@ -116,8 +120,8 @@ logEcho("="*40 + "\n" +  " "*10 + "Customisation Update\n" + "="*40)
 if (! propFile.exists()) {
     propFile.write("", "UTF-8")
 }
-
-updateURL = propFile.text
+updateURL = customUrl ? customUrl : propFile.text
+propFile.write(updateURL, "UTF-8")
 storeUrl = {
     updateURL = propFile.text
     if (! updateURL.find(/^(?i)(ftp|https?|file)\:\/+\w+/) ) {
@@ -220,7 +224,7 @@ updInstPlugs = {
                             } else {
                                 switch (osType) {
                                     case [OsType.WIN64, OsType.WIN32]:
-                                        deleteJars += "    del " + foundJar.toString() + "\n"
+                                        deleteJars += "    del " + "\"" + foundJar.toString() + "\"" + "\n"
                                         success++
                                         winDel = true
                                         break
@@ -271,12 +275,13 @@ printDone = {
     logEcho(" "*3 + "Done")
 }
 
-
-storeUrl()
-while (! contScript ) {
-}
-if (contScript == "aborted") {
-    return
+if (! customUrl) {
+    storeUrl()
+    while (! contScript ) {
+    }
+    if (contScript == "aborted") {
+        return
+    }
 }
 try {
     propFile.text.toURL().openStream()
@@ -539,36 +544,68 @@ and set it as a new Script folder. Do you want to do that?"""
         unzipFile(tmpPluginsZip, tmpPluginsDir)
         logEcho("Plugins are being installed...")
         if (instPlugDir.exists()) {
-            updInstPlugs(tmpPluginsDir, instPlugDir)
-            if (! Files.isWritable(instPlugDir.toPath())) {
-                if (readOnlyJars.readLines().size() > 0) {
-                    nonInstallNames = nonInstallNames.tokenize("\n").unique().join("\n")
-                    message = """  --
-$instPlugDir 
-  is not writable, but it contains file(s)
-  which should be updated by this customisation update utility:
-${readOnlyJars}Plugins which will not be updated:
-$nonInstallNames
-Change folder permissions and run this script again
-to update these plugins.
-  --"""
-                    incomplUpd++
-                    finalMsg += "\nSome plugins could not be updated. Get in touch with support for assistance."
-                } else {
-                    message = """$instPlugDir
-is not writable, but it contains no updateable plugins.
-New plugins will be placed into
-$confPlugDir."""
+            new File(tmpPluginsDir.toString()).eachFileRecurse(groovy.io.FileType.FILES) {
+                def bundleJar = it
+                def baseName = bundleJar.getName()
+                def jarPath = bundleJar.getAbsoluteFile().getParent()
+                def libName = baseName.minus(~/-\d+.*\.jar$/)
+                new File(instPlugDir.toString()).eachFileRecurse(groovy.io.FileType.FILES) {
+                    if (it.name.contains(libName) && it.name.endsWith(".jar")) {
+                        def foundJar = it
+                        def foundPath = foundJar.getAbsoluteFile().getParent()
+                        def foundBaseName = foundJar.getName()
+                        deleteJars += "    del " + "\"" + foundJar.toString() + "\"" + "\n"
+                        readOnlyJars += "    " + foundJar.toString() + "\n"
+                        nonInstallJars += bundleJar.toString() + "\n"
+                        nonInstallNames += "  " + libName + "\n"
+                    }
                 }
-                logEcho(message)
             }
-            nonInstallJars = nonInstallJars.tokenize("\n").unique().each {
-                new File(it).delete()
-            }
-        } else {
-            logEcho("$instPlugDir does not exist.\nPlugins will be updated in $confPlugDir.")
         }
-       
+        
+        if (readOnlyJars.readLines().size() > 0) {
+            if (! Files.isWritable(instPlugDir.toPath())) {
+                message = """  --
+Folder
+$instPlugDir
+is not writable, but it contains file(s)
+which should be updated by this customisation update utility:
+
+${readOnlyJars}
+Make sure the listed files are deleted
+before you start OmegaT again.
+The newer versions of these files will be installed
+into user's configuration folder.
+  --"""
+            } else {
+                switch (osType) {
+                case [OsType.WIN64, OsType.WIN32]:
+                    success++
+                    winDel = true
+                    break
+                default:
+                    readOnlyJars.tokenize("\n").each {
+                        new File(it.replaceAll(/^\s+/, "")).delete()
+                    }
+                    success++
+                    break
+                }
+                message = """  --
+Folder
+$instPlugDir
+is writeable and contains file(s)
+which should be updated by this customisation update utility:
+
+${readOnlyJars}
+This utility will try to remove the listed files.
+The newer versions of these files will be installed
+into user's configuration folder.
+  --"""
+            }
+            logEcho(message)
+            finalMsg += "\n$message"
+            openInstPlugDir = true
+        }
         if (! confPlugDir.exists()) {
             confPlugDir.mkdirs()
         }
@@ -611,6 +648,9 @@ if (success > 0) {
         java.awt.Desktop.desktop.open(batFile)
     }
     logEcho("Shutting down OmegaT")
+    //if (openInstPlugDir) {
+    //    java.awt.Desktop.desktop.open(instPlugDir)
+    //}
     message.alert()
     System.exit(0)
 } else {

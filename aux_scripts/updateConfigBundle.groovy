@@ -2,8 +2,8 @@
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
- * @date:    2019-12-21
- * @version: 0.4.4
+ * @date:    2019-12-30
+ * @version: 0.4.5
  */
 
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
@@ -98,6 +98,7 @@ installDir = new File(System.getProperty("java.class.path")).getAbsoluteFile().g
 instPlugDir = new File(installDir.toString() + File.separator + "plugins")
 confPlugDir = new File(confDir.toString() + File.separator + "plugins")
 scriptsDir = new File(Preferences.getPreference(Preferences.SCRIPTS_DIRECTORY))
+newScriptsDir = new File(confDir.toString() + File.separator + "scripts")
 javaCmd = System.getProperty("sun.java.command")
 verFile = new File(confDir + "local_version_notes.txt")
 propFile = new File(confDir + "customisation.properties")
@@ -272,7 +273,7 @@ printSep = {
     logEcho("-"*40)
 }
 printDone = {
-    logEcho(" "*3 + "Done")
+    logEcho(" "*4 + "-- Done --")
 }
 
 if (! customUrl) {
@@ -477,55 +478,73 @@ if (update != 0) {
         printSep()
     }
     if (((update & scrpUpd) != 0)) {
+        def setScriptsFolder = 0
         logEcho("scripts.zip is being downloaded...")
         downloadZip(scriptsURL, tmpScriptsZip)
         logEcho("scripts.zip is being unpacked...")
         unzipFile(tmpScriptsZip, tmpScriptsDir)
         logEcho("Scripts are being installed...")
-        if (Files.isWritable(scriptsDir.toPath())) {
-            FileUtils.copyDirectory(tmpScriptsDir, scriptsDir)
-            delDir(tmpScriptsDir)
-            finalMsg += "\nYour scripts have been updated."
+        if (! Files.isWritable(scriptsDir.toPath())) {
+            setScriptsFolder = 1
+            message = """Scripts folder
+  $scriptsDir
+is not writable.
+This customisation update utility
+will copy all the installed scripts into
+ $newScriptsDir
+and set set it as a new Scripts folder."""
         } else {
-            message = """Scripts folder is not writable.
-This customisation update utility will copy
-all the installed scripts into a writable folder
-and set it as a new Script folder."""
+            if (scriptsDir != newScriptsDir){
+                setScriptsFolder = 2
+                message = """Scripts folder
+  $scriptsDir
+is writable,
+but it is not
+  $newScriptsDir
+This customisation update utility
+will copy all the installed scripts into
+ $newScriptsDir
+and set set it as a new Scripts folder."""
+            }
+        }
+        if (setScriptsFolder > 0) {
             logEcho(message)
-            newScriptsDir = new File(confDir.toString() + File.separator + "scripts")
             if (! newScriptsDir.exists()) {
                 newScriptsDir.mkdirs()
                 logEcho("$newScriptsDir is created.")
             }
             if (scriptsDir.exists()) {
-                FileUtils.copyDirectoryToDirectory(scriptsDir, new File(confDir))
-                logEcho("Copied files from $scriptsDir to $newScriptsDir.")
+                FileUtils.copyDirectory(scriptsDir, newScriptsDir)
+                logEcho("Script files copied from \n  $scriptsDir \nto \n  $newScriptsDir.")
             } else {
-                logEcho("$scriptsDir is specified but does not actually exist.")
+                logEcho("The folder \n  $scriptsDir \nis specified as the Scripts folder \nbut it does not actually exist.")
             }
-            FileUtils.copyDirectory(tmpScriptsDir, newScriptsDir)
-            logEcho("Copied scripts provided in the customisation bundle.")
-            delDir(tmpScriptsDir)
-            finalMsg += "\nYour scripts have been updated."
-            newSDText = newScriptsDir.toString().replaceAll('\\\\', "\\\\\\\\")
-            Preferences.setPreference(Preferences.SCRIPTS_DIRECTORY, newScriptsDir)
-            logEcho("New Scripts folder is set to ${newScriptsDir}.")
-            if (! localPrefFile.exists()) {
-                writePref = """<?xml version="1.0" encoding="UTF-8" ?>
+            if (setScriptsFolder == 2) {
+                delDir(scriptsDir)
+            }
+            logEcho("Scripts folder is set to \n  ${newScriptsDir}.")
+        }
+        FileUtils.copyDirectory(tmpScriptsDir, newScriptsDir)
+        logEcho("Scripts provided \nin the customisation bundle \ncopied to \n  $newScriptsDir.")
+        delDir(tmpScriptsDir)
+        newSDText = newScriptsDir.toString().replaceAll('\\\\', "\\\\\\\\")
+        Preferences.setPreference(Preferences.SCRIPTS_DIRECTORY, newScriptsDir)
+        if (! localPrefFile.exists()) {
+            writePref = """<?xml version="1.0" encoding="UTF-8" ?>
 <omegat>
 <preference version="1.0">
 <scripts_dir>${newSDText}</scripts_dir>
 </preference>
 </omegat>
 """
-            } else {
-                writePref = localPrefFile.text.findAll(/<scripts_dir>.+<\/scripts_dir>/) ?
-                localPrefFile.text.replaceAll(/<scripts_dir>.+<\/scripts_dir>/, "\\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>") :
-                localPrefFile.text.replaceAll(/>\n  <\/preference>/, "\\>\n    \\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>\n  \\<\\/preference\\>")
-            }
-            localPrefFile.write(writePref, "UTF-8")
-            success++
+        } else {
+            writePref = localPrefFile.text.findAll(/<scripts_dir>.+<\/scripts_dir>/) ?
+            localPrefFile.text.replaceAll(/<scripts_dir>.+<\/scripts_dir>/, "\\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>") :
+            localPrefFile.text.replaceAll(/>\n  <\/preference>/, "\\>\n    \\<scripts_dir\\>${newSDText}\\<\\/scripts_dir\\>\n  \\<\\/preference\\>")
         }
+        localPrefFile.write(writePref, "UTF-8")
+        success++
+        finalMsg += "\nYour scripts have been updated."
         printDone()
         printSep()
     }
@@ -559,14 +578,16 @@ and set it as a new Script folder."""
             if (! Files.isWritable(instPlugDir.toPath())) {
                 message = """  --
 Folder
-$instPlugDir
+  $instPlugDir
 is not writable, but it contains file(s)
-which should be updated by this customisation update utility:
+which should be updated by this
+customisation update utility:
 
 ${readOnlyJars}
 Make sure the listed files are deleted
 before you start OmegaT again.
-The newer versions of these files will be installed
+The newer versions of these files
+will be installed
 into user's configuration folder.
   --"""
             } else {
@@ -584,13 +605,16 @@ into user's configuration folder.
                 }
                 message = """  --
 Folder
-$instPlugDir
+  $instPlugDir
 is writeable and contains file(s)
-which should be updated by this customisation update utility:
+which should be updated by this
+customisation update utility:
 
 ${readOnlyJars}
-This utility will try to remove the listed files.
-The newer versions of these files will be installed
+This utility will try to remove
+the listed files.
+The newer versions of these files
+will be installed
 into user's configuration folder.
   --"""
             }

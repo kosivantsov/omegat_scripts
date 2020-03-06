@@ -2,23 +2,32 @@
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
- * @date:    2019-12-30
- * @version: 0.4.5
+ * @date:    2020-03-06
+ * @version: 0.4.6
  */
 
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
+autoLaunch = false // true for <application_startup> folder, false for the regular scripts folder
+
+import org.omegat.core.events.IApplicationEventListener
 
 import groovy.swing.SwingBuilder
 import groovy.util.XmlSlurper
-import java.awt.FlowLayout
+//import java.awt.*
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.awt.FlowLayout
+import java.awt.GridBagConstraints as GBC
+import java.awt.GridBagLayout as GBL
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.zip.ZipFile
+import javax.swing.JLabel
 import javax.swing.JOptionPane
-import javax.swing.WindowConstants as WC
+import javax.swing.JProgressBar
+import javax.swing.WindowConstants
 import org.apache.commons.io.FileUtils
+import org.omegat.CLIParameters
 import org.omegat.util.Preferences
 import org.omegat.util.StaticUtils
 import org.omegat.util.StringUtil
@@ -35,24 +44,46 @@ String.metaClass.alert = { ->
     showMessageDialog null, delegate, title, INFORMATION_MESSAGE
 }
 
+def projectAlert
+if (autoLaunch) {
+    runChunks = System.getProperty("sun.java.command").split(/\s+/)
+    params = []
+    for (i in 0 .. runChunks.length-1){
+        for (j in i .. runChunks.length-1){
+            item = runChunks[i .. j].join(' ')
+            params.add(item)
+        }
+    }
+    params = params as String[]
+    launchProj = CLIParameters.parseArgs(params).get(CLIParameters.PROJECT_DIR)
+    if (launchProj) {
+        message = """OmegaT was launched with a project to be opened.
+The customisation update script will not be able to run.
+Please restart the application without passing a project path to it."""
+        projectAlert = true
+    } else {
+        projectAlert = false
+    }
+} else {
+    if ( project.projectProperties ) {
+        message = "Close the project and run this script again."
+        projectAlert = true
+    } else {
+        projectAlert = false
+    }
+}
+
 title = "Customisation Update"
-if (project.projectProperties) {
-    message = "Close the project and run this script again."
+if (projectAlert) {
     console.println(message)
     message.alert()
     return
 } else {
-    message = """Please make sure no other instance of OmegaT is running.
-This script may shut down OmegaT to complete the update.
-Do you want to proceed?"""
+    message = """No project.
+Proceeding..."""
     console.println(message)
-    if ( message.confirm() == 0 ) {
-        console.println("Proceeding...")
-    } else {
-        console.println("Update canceled.")
-        return
-    }
 }
+
 omtPid = Long.parseLong(java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0])
 date = new Date().format("YYYYMMddHHmm")
 def update = 0 //initial update bit
@@ -60,6 +91,7 @@ confUpd = 1 //update config
 scrpUpd = 2 //update scripts
 plugUpd = 4 //update plugins
 def success = 0 // to quit OmT on config update
+def noFinMsg
 def incomplUpd = 0 // to check for incomplete updates due to wrong links to .zip files
 def contScript = true // to loop the URL input dialog
 def readOnlyJars = "" //list of installed jars in read-only /plugins
@@ -123,6 +155,7 @@ if (! propFile.exists()) {
 }
 updateURL = customUrl ? customUrl : propFile.text
 propFile.write(updateURL, "UTF-8")
+
 storeUrl = {
     updateURL = propFile.text
     if (! updateURL.find(/^(?i)(ftp|https?|file)\:\/+\w+/) ) {
@@ -131,19 +164,19 @@ storeUrl = {
         logEcho("Please enter a URL to an actual file (expected php, html or txt).")
         swing = new SwingBuilder()
         url_string = ""
-        gui = swing.frame(
-            id:"gui",
+        urlGUI = swing.frame(
+            id:"urlGUI",
             title:"Update Bundle Remote Location",
             show:true,
             pack:true,
             size:[350,100],
             preferredSize:[400,100],
             locationRelativeTo:null,
-            defaultCloseOperation:WC.DISPOSE_ON_CLOSE
+            defaultCloseOperation:WindowConstants.DISPOSE_ON_CLOSE
             ) {
-                gui.addWindowListener(new WindowAdapter() {
+                urlGUI.addWindowListener(new WindowAdapter() {
                     public void windowClosing(WindowEvent we) {
-                        gui.dispose()
+                        urlGUI.dispose()
                         contScript = "aborted"
                         logEcho("The script was aborted.")
                         return
@@ -162,7 +195,7 @@ storeUrl = {
                             propFile.write(name.text, "UTF-8")
                         }
                         contScript = false
-                        gui.dispose()
+                        urlGUI.dispose()
                         storeUrl()
                    }
                 )
@@ -171,6 +204,7 @@ storeUrl = {
         contScript = true
     }
 }
+
 downloadZip = {
     url, dest ->
     FileUtils.copyInputStreamToFile(url.toURL().openStream(), dest)
@@ -284,16 +318,75 @@ if (! customUrl) {
         return
     }
 }
+
 try {
     propFile.text.toURL().openStream()
 } catch (IOException e) {
     e.printStackTrace()
-    message = "Update link is not accessible.\nYou may wish to check $propFile.\nThe script will finish now."
+    message = """Update URL is not accessible.
+You may wish to check your internet connection.
+Make sure that
+  $propFile
+contains the accurate update URL.
+The script will finish now."""
     logEcho(message)
     printSep()
     message.alert()
     return
 }
+
+///// PROGRESS BAR /////
+sb = new SwingBuilder()
+c = new GBC()
+
+progGUI =  sb.frame(
+  title: title,
+  resizable: false,
+  pack: true,
+  //preferredSize:[450,150],
+  defaultCloseOperation: WindowConstants.EXIT_ON_CLOSE,
+  layout: new GBL(),
+//  locationRelativeTo: null,
+)
+
+frameText = new JLabel(
+    text: "<html><p align=\"center\"><b>Please wait for OmegaT customisation bundle update to finish.<br/>Do not close this window.</b></p></html>"
+)
+c.fill = GBC.BOTH
+c.anchor = GBC.PAGE_START
+c.gridx = 0
+c.gridy = 0
+c.ipady=20
+c.weightx = 0
+progGUI.add(frameText, c)
+
+pb = new JProgressBar(
+    indeterminate: true,
+)
+c.fill = GBC.HORIZONTAL
+c.anchor = GBC.CENTER
+c.gridx = 0
+c.gridy = 1
+//c.gridwidth = 3
+c.ipadx=340
+c.ipady=0
+progGUI.add(pb, c)    
+
+frameProgress = new JLabel(
+    text: "OmegaT customisation bundle is being updated.\nPlease wait",
+)
+c.fill = GBC.BOTH
+c.anchor = GBC.PAGE_END
+c.gridx = 0
+c.gridy = 2
+c.ipadx=0
+c.ipady=40
+c.weightx = 0.1
+c.weighty = 0.9
+progGUI.add(frameProgress, c)
+progGUI.setSize(450,150)
+progGUI.setLocationRelativeTo(null)
+///// END OF PROGRESS BAR /////
 
 updateURLS = propFile.text.toURL().text.readLines()
 try {
@@ -369,6 +462,10 @@ if (! verFile.exists()) {
         logEcho("No customisation update needed.")
         finalMsg += "\nNo files needed to be updated."
         printSep()
+        success = -2
+        if (autoLaunch) {
+            noFinMsg = true
+        }
     } else {
         if (Integer.parseInt(localVer.tokenize("_")[0]) < Integer.parseInt(remVer.tokenize("_")[0]) - 1)
         remVer = remVer.tokenize("_")[0] + "_csp"
@@ -407,12 +504,14 @@ if (! verFile.exists()) {
     }
 }
 if (update != 0) {
+    progGUI.show()
     if (tmpBundleDir.exists()) {
         tmpBundleDir.deleteDir()
         tmpBundleDir.mkdirs()
     }
     if (((update & confUpd) != 0)) {
         logEcho("config.zip is being downloaded...")
+        frameProgress.setText("Updating config...")
         downloadZip(configURL, tmpConfigZip)
         logEcho("config.zip is being unpacked...")
         unzipFile(tmpConfigZip, tmpConfigDir)
@@ -473,6 +572,7 @@ if (update != 0) {
         delDir(tmpConfigDir)
         success++
         finalMsg += "\nYour config files have been updated."
+        frameProgress.setText("Config updated.")
         logEcho("OmegaT will need to be restarted.")
         printDone()
         printSep()
@@ -480,6 +580,7 @@ if (update != 0) {
     if (((update & scrpUpd) != 0)) {
         def setScriptsFolder = 0
         logEcho("scripts.zip is being downloaded...")
+        frameProgress.setText("Updating scripts...")
         downloadZip(scriptsURL, tmpScriptsZip)
         logEcho("scripts.zip is being unpacked...")
         unzipFile(tmpScriptsZip, tmpScriptsDir)
@@ -545,11 +646,13 @@ and set set it as a new Scripts folder."""
         localPrefFile.write(writePref, "UTF-8")
         success++
         finalMsg += "\nYour scripts have been updated."
+        frameProgress.setText("Scripts updated.")
         printDone()
         printSep()
     }
     if (((update & plugUpd) != 0 )) {
         logEcho("plugins.zip is being downloaded...")
+        frameProgress.setText("Updating plugins...")
         downloadZip(pluginsURL, tmpPluginsZip)
         logEcho("plugins.zip is being unpacked...")
         unzipFile(tmpPluginsZip, tmpPluginsDir)
@@ -642,6 +745,7 @@ into user's configuration folder.
         }
         FileUtils.copyDirectory(tmpPluginsDir, confPlugDir, true)
         finalMsg += "\nYour plugins have been updated."
+        frameProgress.setText("Plugins updated.")
         delDir(tmpPluginsDir)
         printDone()
         printSep()
@@ -655,8 +759,9 @@ into user's configuration folder.
      }
 logEcho("="*40 + "\n" + " "*5 + "Customisation Update Finished\n" + "="*40)
 def batFile
+progGUI.dispose()
 if (success > 0) {
-    message = "<html><b>Customisation update $remVer finished!</b></html>\n\nSummary:\n" + finalMsg + "\n\nOmegaT will now quit."
+    message = "<html><b>Customisation update $remVer finished!</b><br/>OmegaT will have to be restarted.</html>"
     if (winDel) {
         deleteJars += ")"
         batFile = new File(tmpBundleDir.toString() + File.separator + "DeleteJars.cmd")
@@ -670,7 +775,16 @@ if (success > 0) {
     message.alert()
     System.exit(0)
 } else {
-    message = "<html><b>Customisation update $remVer finished!</b></html>\n\nSummary:\n" + finalMsg + "\n\nOmegaT does not need to be restarted."
-    message.alert()
+    if (success == -2) {
+        if (noFinMsg) {
+            return
+        } else {
+            message = "<html><b>Your customisation $remVer is up to date!</b><br/>No update needed.</html>"
+            message.alert()
+        }
+    } else {
+        message = "<html><b>Customisation update $remVer finished!</b><br/>OmegaT does not need to be restarted.</html>"
+        message.alert()
+    }
 }
 return

@@ -1,9 +1,9 @@
-/* :name = Update Customisation Bundle :description =
+/* :name = Update Customisation Bundle LOCAL :description =
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
- * @date:    2020-03-06
- * @version: 0.4.6
+ * @date:    2020-04-13
+ * @version: 0.4.7
  */
 
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
@@ -92,9 +92,11 @@ scrpUpd = 2 //update scripts
 plugUpd = 4 //update plugins
 def success = 0 // to quit OmT on config update
 def noFinMsg
+def plugMsg=""
 def incomplUpd = 0 // to check for incomplete updates due to wrong links to .zip files
 def contScript = true // to loop the URL input dialog
 def readOnlyJars = "" //list of installed jars in read-only /plugins
+def finReadOnlyJars = ""
 def nonInstallJars = "" //list of jars not to be installed because older version resides in read-only /plugins
 def nonInstallNames = "" //same, but only names
 def winDel = false
@@ -294,6 +296,7 @@ updInstPlugs = {
                         }
                     } else {
                         readOnlyJars += "    " + foundJar.toString() + "\n"
+                        finReadOnlyJars += "<html><center><u>" + foundJar.toString() + "</u></center></html>\n"
                         nonInstallJars += bundleJar.toString() + "\n"
                         nonInstallNames += "  " + libName + "\n"
                     }
@@ -323,12 +326,15 @@ try {
     propFile.text.toURL().openStream()
 } catch (IOException e) {
     e.printStackTrace()
-    message = """Update URL is not accessible.
-You may wish to check your internet connection.
-Make sure that
-  $propFile
-contains the accurate update URL.
-The script will finish now."""
+    if (customUrl) {
+        urlMsg="<b>customUrl</b> variable in the beginning of the script"
+    } else {
+        urlMsg="<u>$propFile</u>"
+    }
+    message = """<html><center>Update URL is not accessible.<br/>You may wish to check your internet connection.</center></html>
+<html>Make sure that<br/><center>&nbsp;&nbsp;$urlMsg&nbsp;&nbsp;</center>\
+contains the accurate update URL.<br/><br/>\
+<center>The script will finish now.</center></html>"""
     logEcho(message)
     printSep()
     message.alert()
@@ -458,7 +464,7 @@ if (! verFile.exists()) {
     localVer = verFile.text.find(/Update \d+_\w{3}/)
     localVer = localVer ? localVer.minus(/Update /) : "0_000"
     logEcho("Local customisation version is $localVer.\nRemote customisation version is $remVer.")
-    if (localVer >= remVer) {
+    if (Integer.parseInt(localVer.tokenize("_")[0]) >= Integer.parseInt(remVer.tokenize("_")[0])) {
         logEcho("No customisation update needed.")
         finalMsg += "\nNo files needed to be updated."
         printSep()
@@ -670,13 +676,14 @@ and set set it as a new Scripts folder."""
                         def foundBaseName = foundJar.getName()
                         deleteJars += "    del " + "\"" + foundJar.toString() + "\"" + "\n"
                         readOnlyJars += "    " + foundJar.toString() + "\n"
+                        finReadOnlyJars += "<html><center><u>" + foundJar.toString() + "</u></center></html>\n"
                         nonInstallJars += bundleJar.toString() + "\n"
                         nonInstallNames += "  " + libName + "\n"
                     }
                 }
             }
         }
-        
+
         if (readOnlyJars.readLines().size() > 0) {
             if (! Files.isWritable(instPlugDir.toPath())) {
                 message = """  --
@@ -693,6 +700,10 @@ The newer versions of these files
 will be installed
 into user's configuration folder.
   --"""
+plugMsg="""
+<html><center><b>WARNING:</b><br/>To avoid possible conflicts, please delete manually</center><html>
+${finReadOnlyJars}
+"""
             } else {
                 switch (osType) {
                 case [OsType.WIN64, OsType.WIN32]:
@@ -761,7 +772,8 @@ logEcho("="*40 + "\n" + " "*5 + "Customisation Update Finished\n" + "="*40)
 def batFile
 progGUI.dispose()
 if (success > 0) {
-    message = "<html><b>Customisation update $remVer finished!</b><br/>OmegaT will have to be restarted.</html>"
+    message = "<html><center><b>Customisation update $remVer finished!</b><br/>OmegaT will now close.</center><br></html>$plugMsg"
+
     if (winDel) {
         deleteJars += ")"
         batFile = new File(tmpBundleDir.toString() + File.separator + "DeleteJars.cmd")
@@ -769,9 +781,9 @@ if (success > 0) {
         java.awt.Desktop.desktop.open(batFile)
     }
     logEcho("Shutting down OmegaT")
-    //if (openInstPlugDir) {
-    //    java.awt.Desktop.desktop.open(instPlugDir)
-    //}
+    if (openInstPlugDir) {
+        java.awt.Desktop.desktop.open(instPlugDir)
+    }
     message.alert()
     System.exit(0)
 } else {
@@ -779,11 +791,11 @@ if (success > 0) {
         if (noFinMsg) {
             return
         } else {
-            message = "<html><b>Your customisation $remVer is up to date!</b><br/>No update needed.</html>"
+            message = "<html><center><b>Your customisation $remVer is up to date!</b><br/>No update needed.</center></html>"
             message.alert()
         }
     } else {
-        message = "<html><b>Customisation update $remVer finished!</b><br/>OmegaT does not need to be restarted.</html>"
+        message = "<html<center><b>Customisation update $remVer finished!</b><br/>You may open your project now.</center></html>"
         message.alert()
     }
 }

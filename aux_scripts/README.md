@@ -14,7 +14,9 @@ All these custom files will be saved in the **user configuration folder**. Plugi
 
 ### Caveats
 
-To avoid conflicts, the script deletes all jar files from the **installation folder** (if that folder is writeable) or prompts the user do so manually (if the folder is read-only). Those files should be backed up if that folder is writeable and they are to be kept.
+To avoid conflicts, the script deletes all jar files from the **installation folder** (if that folder is writeable) or prompts the user do so manually (if the folder is read-only). 
+
+Any jar files that the user might wish to keep can be saved under a subfolder in the `plugins` folder, e.g. `plugins\my_folder`. That way they will be protected and the customization script will not touch them. 
 
 ### Where is the user configuration folder
 

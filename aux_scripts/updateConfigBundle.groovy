@@ -1,13 +1,15 @@
-/* :name = Update Customisation Bundle LOCAL :description =
+/* :name = Update Customisation Bundle :description =
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
  * @date:    2020-04-13
- * @version: 0.4.7
+ * @version: 0.4.8
  */
 
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
 autoLaunch = false // true for <application_startup> folder, false for the regular scripts folder
+removeExtraPlugins = true // true if the script should try to remove jar files in <install_folder>/plugins
+deletePlugVerbose = true // true to list the plugins in the read-only folder which the script couldn't remove
 
 import org.omegat.core.events.IApplicationEventListener
 
@@ -92,13 +94,15 @@ scrpUpd = 2 //update scripts
 plugUpd = 4 //update plugins
 def success = 0 // to quit OmT on config update
 def noFinMsg
-def plugMsg=""
 def incomplUpd = 0 // to check for incomplete updates due to wrong links to .zip files
 def contScript = true // to loop the URL input dialog
+def plugMsg="" // for the final message about plugins to be deleted
+def custDelJars = [] //it will collect the paths of all older vers of the plugins provided by the customiser
+def allDelJars = [] //it will collect the paths of all the plugins to be deleted
 def readOnlyJars = "" //list of installed jars in read-only /plugins
-def finReadOnlyJars = ""
-def nonInstallJars = "" //list of jars not to be installed because older version resides in read-only /plugins
-def nonInstallNames = "" //same, but only names
+def finReadOnlyJars = "" //the same list for the final message
+//def nonInstallJars = "" //list of jars not to be installed because older version resides in read-only /plugins
+//def nonInstallNames = "" //same, but only names
 def winDel = false
 def openInstPlugDir = false
 def deleteJars = """@echo off
@@ -674,17 +678,35 @@ and set set it as a new Scripts folder."""
                         def foundJar = it
                         def foundPath = foundJar.getAbsoluteFile().getParent()
                         def foundBaseName = foundJar.getName()
-                        deleteJars += "    del " + "\"" + foundJar.toString() + "\"" + "\n"
-                        readOnlyJars += "    " + foundJar.toString() + "\n"
-                        finReadOnlyJars += "<html><center><u>" + foundJar.toString() + "</u></center></html>\n"
-                        nonInstallJars += bundleJar.toString() + "\n"
-                        nonInstallNames += "  " + libName + "\n"
+                        custDelJars.add(foundJar.toString())
+                        //deleteJars += "    del " + "\"" + foundJar.toString() + "\"" + "\n"
+                        //readOnlyJars += "    " + foundJar.toString() + "\n"
+                        //finReadOnlyJars += "<html><center><u>" + foundJar.toString() + "</u></center></html>\n"
+                        //nonInstallJars += bundleJar.toString() + "\n"
+                        //nonInstallNames += "  " + libName + "\n"
                     }
                 }
             }
+            ////Look for extra plugins in the root of the <install_folder>/plugins
+            if (removeExtraPlugins) {
+                new File(instPlugDir.toString()).eachFile(groovy.io.FileType.FILES) {
+                    if (it.name.endsWith(".jar")) {
+                        allDelJars.add(it.toString())
+                    }
+                }
+                allDelJars += custDelJars
+            } else {
+                allDelJars = custDelJars
+            }
+
+            allDelJars.each() {
+                deleteJars += "    del " + "\"" + it + "\"" + "\n"
+                readOnlyJars += "    " + it + "\n"
+                finReadOnlyJars += "<html><center><u>" + it + "</u></center></html>\n"
+            }
         }
 
-        if (readOnlyJars.readLines().size() > 0) {
+        if (allDelJars.size() > 0) {
             if (! Files.isWritable(instPlugDir.toPath())) {
                 message = """  --
 Folder
@@ -700,10 +722,15 @@ The newer versions of these files
 will be installed
 into user's configuration folder.
   --"""
-plugMsg="""
+                plugMsg="""
 <html><center><b>WARNING:</b><br/>To avoid possible conflicts, please delete manually</center><html>
-${finReadOnlyJars}
 """
+                if (deletePlugVerbose) {
+                    plugMsg += "${finReadOnlyJars}"
+                } else {
+                    plugMsg += """<html><center>all plugin files in</center></html>
+<html><u>$instPlugDir</u></html>"""
+                }
             } else {
                 switch (osType) {
                 case [OsType.WIN64, OsType.WIN32]:

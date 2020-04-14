@@ -12,6 +12,15 @@ OmegaT can be customized by means of:
 
 All these custom files will be saved in the **user configuration folder**. Plugins and scripts are saved in their respective folders, `plugins` and `scripts`, and the rest of the configuration files are written directly to the user configuration folder.
 
+### Options 
+
+| Option | Description |
+|:-------|:------------|
+| `customUrl` | insert URL between quotes or set to "" (empty) to ask the user on the first run. | 
+| `autoLaunch` | If set to `true` and the script is saved at `scrips\application_startup`, the script will run when OmegaT is started. |
+| `removeExtraPlugins` | Lets you delete any loose jar files in the `plugins` folder under the **installation folder**. |
+| `deletePlugVerbose` | If set to true, makes the script list the jar files to be removed manually. If set to false, it makes the script remind the user to remove plugins from the `plugins` folder under the **installation folder**. |
+
 ### Caveats
 
 To avoid conflicts, the script deletes all jar files from the **installation folder** (if that folder is writeable) or prompts the user do so manually (if the folder is read-only). 

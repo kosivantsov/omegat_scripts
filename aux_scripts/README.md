@@ -33,13 +33,14 @@ Any jar files that the user might wish to keep can be saved under a subfolder in
 
 To make sure that the new settings are applied (in case there is more than instance running), OmegaT will close after the customization update. It needs to be restarted manually. Since the check for updates happens when OmegaT is launched and before any project is open, if there is any update available, it'll have to be started twice. 
 
-### Where is the user configuration folder
+### Locations
+#### Where is the user configuration folder
 
 The user can reach that folder in two ways:
 
 * From OmegaT, go to **Tool > User Configuration Folder**
 * From the operating system, (in Windows) press **Win+R** and type `%appdata%/OmegaT`.
 
-### Where is the installation folder
+#### Where is the installation folder#
 
 On a 64-bit machine under Windows 10, it is by default on path `C:\Program Files\OmegaT`.

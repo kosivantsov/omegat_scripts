@@ -41,6 +41,6 @@ The user can reach that folder in two ways:
 * From OmegaT, go to **Tool > User Configuration Folder**
 * From the operating system, (in Windows) press **Win+R** and type `%appdata%/OmegaT`.
 
-#### Where is the installation folder#
+#### Where is the installation folder
 
 On a 64-bit machine under Windows 10, it is by default on path `C:\Program Files\OmegaT`.

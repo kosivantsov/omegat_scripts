@@ -23,9 +23,15 @@ All these custom files will be saved in the **user configuration folder**. Plugi
 
 ### Caveats
 
+#### Plugins
+
 To avoid conflicts, the script deletes all jar files from the **installation folder** (if that folder is writeable) or prompts the user do so manually (if the folder is read-only). 
 
 Any jar files that the user might wish to keep can be saved under a subfolder in the `plugins` folder, e.g. `plugins\my_folder`. That way they will be protected and the customization script will not touch them. 
+
+#### Restart
+
+To make sure that the new settings are applied (in case there is more than instance running), OmegaT will close after the customization update. It needs to be restarted manually. Since the check for updates happens when OmegaT is launched and before any project is open, if there is any update available, it'll have to be started twice. 
 
 ### Where is the user configuration folder
 

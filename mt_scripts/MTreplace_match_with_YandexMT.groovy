@@ -1,19 +1,21 @@
 /* :name=MT - Replace match with YandexMT :description=Yandex translation of the active match
  *
  * @author  Kos Ivantsov
- * @date    2020-04-23
- * @version 0.4
+ * @date    2020-04-24
+ * @version 0.4.1
  */
 import groovy.json.JsonSlurper
 import groovy.swing.SwingBuilder
 import groovy.transform.Field
-import java.awt.FlowLayout
+import java.awt.GridBagConstraints as GBC
+import java.awt.GridBagLayout as GBL
 import javax.swing.ImageIcon
 import javax.swing.JLabel
 import javax.swing.WindowConstants
 import org.omegat.util.WikiGet
 showPopUp = true // set to false to disable popups
 showStatusBar = true // set to false to disable statusbar messages
+showSuccessPopUp = true // set to false to disable popups on successful operation
 // Timeouts
 int popupTimeout = 850 //info in popup
 int statusTimeout = 5000 //info in the status bar
@@ -41,14 +43,21 @@ showGui = { msg, img ->
         size:[400,100],
         preferredSize:[400,100],
         locationRelativeTo:null,
-        defaultCloseOperation:WindowConstants.DISPOSE_ON_CLOSE
-        ) {
-            flowLayout()
-            image = new ImageIcon(tmpDir + File.separator + img + ".png")
-            imageLabel = new JLabel(image)
-            label(imageLabel)
-            label(msg)
-        }
+        defaultCloseOperation:WindowConstants.DISPOSE_ON_CLOSE,
+        layout: new GBL()
+        )
+    image = new ImageIcon(tmpDir + File.separator + img + ".png")
+    c = new GBC()
+    c.fill = GBC.BOTH
+    c.anchor = GBC.PAGE_START
+    c.gridx = 0
+    c.gridy = 0
+    popUp.add(new JLabel(image), c)
+    c.fill = GBC.HORIZONTAL
+    c.anchor = GBC.CENTER
+    c.gridx = 0
+    c.gridy = 1
+    popUp.add(new JLabel(msg), c)
     if (showPopUp) {
         popUp.show()
         Timer timer = new Timer().schedule(
@@ -110,6 +119,9 @@ def gui() {
         editor.replaceEditText(obj.text[0])
         msg = "Translated match inserted"
         image = "yandex"
+        if (!showSuccessPopUp) {
+            showPopUp = false
+        }
         showGui(msg, image)
         console.println(msg)
         return

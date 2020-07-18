@@ -2,8 +2,8 @@
  *  Update OmegaT customisation from a remote repository
  * 
  * @author:  Kos Ivantsov
- * @date:    2020-04-13
- * @version: 0.4.8
+ * @date:    2020-07-18
+ * @version: 0.4.9
  */
 
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
@@ -259,7 +259,7 @@ updInstPlugs = {
                     def foundPath = foundJar.getAbsoluteFile().getParent()
                     def foundBaseName = foundJar.getName()
                     if ((Files.isWritable(instDir.toPath()))) {
-                        if (foundBaseName < baseName) {
+                        if (foundBaseName <= baseName) {
                             if (foundPath != instDir.toString()) {
                                 new File(foundPath).deleteDir()
                             } else {
@@ -726,7 +726,7 @@ into user's configuration folder.
 <html><center><b>WARNING:</b><br/>To avoid possible conflicts, please delete manually</center><html>
 """
                 if (deletePlugVerbose) {
-                    plugMsg += "${finReadOnlyJars}"
+                    plugMsg += "${finReadOnlyJars.tokenize("\n").unique().join("\n")}"
                 } else {
                     plugMsg += """<html><center>all plugin files in</center></html>
 <html><u>$instPlugDir</u></html>"""

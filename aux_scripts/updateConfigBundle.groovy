@@ -6,6 +6,16 @@
  * @version: 0.4.9
  */
 
+/*
+ * INFO:    In Windows installations the user configuration folder is accessible from OmegaT from menu 
+ *          *Options > User Configuration Folder*. Normally it will also be the same path that shortcut 
+ *          `%appdata%/OmegaT` leads to, which is `C:\Users\souto\AppData\Roaming\OmegaT`.
+ * 
+ * DOCUMENTATION: 
+ *          https://github.com/kosivantsov/omegat_scripts/tree/master/aux_scripts#customization-script-updateconfigbundlegroovy
+ *
+ */
+
 def customUrl = "" //insert URL between quotes or set to "" (empty) to ask the user on the 1st run, don't comment out
 autoLaunch = false // true for <application_startup> folder, false for the regular scripts folder
 removeExtraPlugins = true // true if the script should try to remove jar files in <install_folder>/plugins
@@ -723,7 +733,7 @@ will be installed
 into user's configuration folder.
   --"""
                 plugMsg="""
-<html><center><b>WARNING:</b><br/>To avoid possible conflicts, please delete manually</center><html>
+<html><center><b>WARNING:</b><br/>Please delete the following files:</center><html>
 """
                 if (deletePlugVerbose) {
                     plugMsg += "${finReadOnlyJars.tokenize("\n").unique().join("\n")}"

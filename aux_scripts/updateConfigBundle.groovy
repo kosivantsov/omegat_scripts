@@ -607,25 +607,13 @@ if (update != 0) {
         logEcho("Scripts are being installed...")
         if (! Files.isWritable(scriptsDir.toPath())) {
             setScriptsFolder = 1
-            message = """Scripts folder
-  $scriptsDir
-is not writable.
-This customisation update utility
-will copy all the installed scripts into
- $newScriptsDir
-and set set it as a new Scripts folder."""
+            message = """Scripts folder $scriptsDir is not writable.
+This customisation update will copy all the installed scripts into $newScriptsDir and set set it as a new Scripts folder."""
         } else {
             if (scriptsDir != newScriptsDir){
                 setScriptsFolder = 2
-                message = """Scripts folder
-  $scriptsDir
-is writable,
-but it is not
-  $newScriptsDir
-This customisation update utility
-will copy all the installed scripts into
- $newScriptsDir
-and set set it as a new Scripts folder."""
+                message = """Scripts folder $scriptsDir is writable, but it is not $newScriptsDir.
+This customisation update will copy all the installed scripts into $newScriptsDir and set set it as a new Scripts folder."""
             }
         }
         if (setScriptsFolder > 0) {
@@ -636,9 +624,9 @@ and set set it as a new Scripts folder."""
             }
             if (scriptsDir.exists()) {
                 FileUtils.copyDirectory(scriptsDir, newScriptsDir)
-                logEcho("Script files copied from \n  $scriptsDir \nto \n  $newScriptsDir.")
+                logEcho("Script files copied from $scriptsDir to $newScriptsDir.")
             } else {
-                logEcho("The folder \n  $scriptsDir \nis specified as the Scripts folder \nbut it does not actually exist.")
+                logEcho("The folder $scriptsDir is specified as the Scripts folder but it does not actually exist.")
             }
             if (setScriptsFolder == 2) {
                 delDir(scriptsDir)
@@ -646,7 +634,7 @@ and set set it as a new Scripts folder."""
             logEcho("Scripts folder is set to \n  ${newScriptsDir}.")
         }
         FileUtils.copyDirectory(tmpScriptsDir, newScriptsDir)
-        logEcho("Scripts provided \nin the customisation bundle \ncopied to \n  $newScriptsDir.")
+        logEcho("Scripts provided in the customisation bundle copied to $newScriptsDir.")
         delDir(tmpScriptsDir)
         newSDText = newScriptsDir.toString().replaceAll('\\\\', "\\\\\\\\")
         Preferences.setPreference(Preferences.SCRIPTS_DIRECTORY, newScriptsDir)
@@ -719,18 +707,11 @@ and set set it as a new Scripts folder."""
         if (allDelJars.size() > 0) {
             if (! Files.isWritable(instPlugDir.toPath())) {
                 message = """  --
-Folder
-  $instPlugDir
-is not writable, but it contains file(s)
-which should be updated by this
-customisation update utility:
+Folder $instPlugDir is not writable, but it contains file(s) which should be updated by this customisation update:
 
 ${readOnlyJars}
-Make sure the listed files are deleted
-before you start OmegaT again.
-The newer versions of these files
-will be installed
-into user's configuration folder.
+Make sure the listed files are deleted before you start OmegaT again.
+The newer versions of these files will be installed into user's configuration folder.
   --"""
                 plugMsg="""
 <html><center><b>WARNING:</b><br/>Please delete the following files:</center><html>
@@ -755,18 +736,11 @@ into user's configuration folder.
                     break
                 }
                 message = """  --
-Folder
-  $instPlugDir
-is writeable and contains file(s)
-which should be updated by this
-customisation update utility:
+Folder $instPlugDir is writeable and contains file(s) which should be updated by the customisation:
 
 ${readOnlyJars}
-This utility will try to remove
-the listed files.
-The newer versions of these files
-will be installed
-into user's configuration folder.
+This utility will try to remove the listed files.
+The newer versions of these files will be installed into user's configuration folder.
   --"""
             }
             logEcho(message)

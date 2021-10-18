@@ -1,4 +1,4 @@
-/* :name=       Write Project to Excel :description=
+/* :name=       Write Project (XLIFF) to Excel :description=
  * 
  * 
  * 
@@ -20,7 +20,8 @@
  * 
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
- * @version:    0.4
+ * @latest:	 2021-06-24
+ * @version:    0.5
  */
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
@@ -60,10 +61,11 @@ resBundle = { k,v ->
         v
     }
 }
+
 @Grab(group='net.sourceforge.jexcelapi', module='jxl', version='2.6.12')
-//jxlFile = new FileNameByRegexFinder().getFileNames(Preferences.getPreferenceDefault(Preferences.SCRIPTS_DIRECTORY, "."), /jxl.*\.jar/)
-//def jxlJar  = new File(jxlFile[0]).toURI().toURL()
-//Thread.currentThread().getContextClassLoader(jxlFile) //.addURL(jxlJar)
+// jxlFile = new FileNameByRegexFinder().getFileNames(Preferences.getPreferenceDefault(Preferences.SCRIPTS_DIRECTORY, "."), /jxl.*\.jar/)
+// def jxlJar  = new File(jxlFile[0]).toURI().toURL()
+// Thread.currentThread().getContextClassLoader().addURL(jxlJar)
 def Alignment          = Class.forName('jxl.format.Alignment')
 def Border             = Class.forName('jxl.format.Border')
 def BorderLineStyle    = Class.forName('jxl.format.BorderLineStyle')
@@ -258,6 +260,6 @@ w.close()
 fos.flush()
 fos.close()
 message=utils.format(resBundle("message", message), segments, table_file)
-mainWindow.statusLabel.setText(message)
+//mainWindow.statusLabel.setText(message)
 console.println(message)
-Timer timer = new Timer().schedule({mainWindow.statusLabel.setText(null); console.clear()} as TimerTask, 10000)
+//Timer timer = new Timer().schedule({mainWindow.statusLabel.setText(null); console.clear()} as TimerTask, 10000)

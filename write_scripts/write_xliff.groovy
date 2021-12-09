@@ -5,7 +5,10 @@
  * @version:    1.0
  */
 
+/* set to true to export all project
+ * otherwise the script exports only the current file   */
 all_project = false
+
 /* set to true to write a settings file for Okapi Rainbow that can be
  * used to convert the XLF file produced by this script, to TMX.
  * Otherwise set to false    */
@@ -26,7 +29,7 @@ preserve_spaces = true
 xliffUntranslated = "ignore"
 
 /* The value set for the following variable will
- * be inserted in empty translations as target   */
+ * be inserted into INTENTIONALLY empty translations as target   */
 emptyTranslation = ''
 
 

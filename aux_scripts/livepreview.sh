@@ -7,11 +7,11 @@ PDFDIR="${PROJROOT}pdf"
 if [ ! -d "$PDFDIR" ]; then
     mkdir "$PDFDIR"
 fi
-ln -sf $CURRENTDOC $PDFDIR
+ln -sf "$CURRENTDOC" "$PDFDIR"
 cd $PDFDIR
-mv $(basename ${FILENAME}) current.${FILENAME##*.}  
+mv "$(basename "$FILENAME")" "current."${FILENAME##*.}""  
 lowriter --convert-to pdf --outdir $PDFDIR $PDFDIR/current.${FILENAME##*.} > /dev/null 2>&1
-# ps ux|grep zathura|grep current.pdf > /tmp/omt.txt
+ps ux|grep zathura|grep current.pdf > /tmp/omt.txt
 if [ -z "$(ps ux|grep $PDFVIEWER|grep current.pdf)" ]; then
     $PDFVIEWER $PDFDIR/current.pdf
 fi

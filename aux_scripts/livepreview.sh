@@ -13,6 +13,8 @@ mv "$(basename "$FILENAME")" "current."${FILENAME##*.}""
 lowriter --convert-to pdf --outdir $PDFDIR $PDFDIR/current.${FILENAME##*.} > /dev/null 2>&1
 ps ux|grep zathura|grep current.pdf > /tmp/omt.txt
 if [ -z "$(ps ux|grep $PDFVIEWER|grep current.pdf)" ]; then
-    $PDFVIEWER $PDFDIR/current.pdf
+    $PDFVIEWER $PDFDIR/current.pdf > /dev/null 2>&1 &
+    echo "Previewing current target file"
+    exit
 fi
-echo "Previewing current target file"
+exit 

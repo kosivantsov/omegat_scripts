@@ -4,7 +4,8 @@
  * #Purpose:  Export current file into a HTML table
  * 
  * #Files:    Writes 'FILENAME.html' (filename is based on
- *            the actual current file name) in the 'script_output'
+ *            the actual current file name or the project folder name)
+ *            in the 'script_output' subfolder
  *            The table will be created in this format:
  *            +--------------+--------------+--------------+
  *            |  Repeat/Alt  |  Source  LN  |  Target  LN  |
@@ -24,7 +25,7 @@ import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
 
 //// Script Options
-all_project = false      //Set to true to export all project, only the current file will be exported
+all_project = true      //Set to true to export all project, only the current file will be exported
 autoopen    = "none"    //Automatically open the table file upon creation ("folder"|"table"|"none")
 skipUntran  = true      //Skip untranslated segments (true|false)
 fillEmptTran= false     //Add custom string to empty translations, i.e. where translation is INTENTIONALLY set to empty (true|false)
@@ -63,7 +64,7 @@ noTable = "Nothing to export. {0} wasn't created."
 def echo
 def cli
 try {
-    console.println("")
+    mainWindow.statusLabel.getText()
     echo = {
         k -> console.println(k.toString())
     }
@@ -226,8 +227,10 @@ table = new File(folder + filename + '.html')
 if (count > 0) {
     table.write(table_contents.toString().replaceAll("\\n\\s+\\n", '\n').trim(), 'UTF-8')
     echo(utils.format(resBundle("countWritten", countWritten), count, table))
-    mainWindow.statusLabel.setText(utils.format(resBundle("tableWritten", tableWritten), table, count))
-    Timer timer = new Timer().schedule({mainWindow.statusLabel.setText(null)} as TimerTask, 10000)
+    if (!cli) {
+        mainWindow.statusLabel.setText(utils.format(resBundle("tableWritten", tableWritten), table, count))
+        Timer timer = new Timer().schedule({mainWindow.statusLabel.setText(null)} as TimerTask, 10000)
+    }
 
     if (autoopen in ["folder", "table"]) {
         autoopen = evaluate("${autoopen}")

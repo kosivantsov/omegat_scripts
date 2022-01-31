@@ -12,7 +12,7 @@
  * 
  * @author:   Kos Ivantsov
  * @date:     2022-01-31
- * @version:  0.4
+ * @version:  0.4.1
  */
 import java.awt.Desktop
 import org.omegat.core.Core
@@ -24,7 +24,7 @@ import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
 
 //// Script Options
-all_project = true      //Set to true to export all project, only the current file will be exported
+all_project = false      //Set to true to export all project, only the current file will be exported
 autoopen    = "none"    //Automatically open the table file upon creation ("folder"|"table"|"none")
 skipUntran  = true      //Skip untranslated segments (true|false)
 fillEmptTran= false     //Add custom string to empty translations, i.e. where translation is INTENTIONALLY set to empty (true|false)
@@ -38,6 +38,8 @@ firstStr    = "1"       //Cell mark for the 1st occurance of a repeated segment
 repStr      = "+"       //Cell mark for further occurances of a repeated segment
 altStr      = "a"       //Cell mark fo alternative translation of the segmnent
 defStr      = ""        //Cell mark fo default translation of the segmnent
+markFiles   = true      //First segments in files will have a different color for the top border
+markPara    = true      //First segments in paragraphs will have a different color for the top border
 
 //// Colors
 normfg    = '#000000'   //foreground
@@ -47,6 +49,8 @@ curtxtbg  = '#BCC6CC'   //font background in segment's text
 nonuniqfg = '#595959'   //foreground for non-uniq segments
 nonuniqbg = '#F4F6F7'   //background for non-uniq segments
 alttxtbg  = '#C73A3A'   //background for alternative translations
+fileborder= '#210620'   //border color to mark new files
+paraborder= '#aab7b8'   //border color to mark paragraphs
 
 //// UI Strings
 name = "Export project to table"
@@ -111,12 +115,6 @@ paintseg = {
 srclang = prop.getSourceLanguage()
 targlang = prop.getTargetLanguage()
 folder = prop.projectRoot+'script_output/'
-curfilename = Core.getEditor().getCurrentFile().replaceAll("[:\\\\/*\"?|<>' ]", "_")
-table = new File(folder + curfilename + '.html')
-// create folder if it doesn't exist
-if (! (new File (folder)).exists()){
-    (new File(folder)).mkdir()
-    }
 
 extraWidth  = addExtraCol  ? 2 : 0
 srcWidth  = (100 - extraWidth) / 2
@@ -141,8 +139,10 @@ table_contents << """\
 """
 if (all_project || cli) {
     files = project.projectFiles
+    filename = new File(prop.getProjectRoot()).getName()
 } else {
     files = project.projectFiles.subList(editor.@displayedFileIndex, editor.@displayedFileIndex + 1)
+    filename = Core.getEditor().getCurrentFile().replaceAll("[:\\\\/*\"?|<>' ]", "_")
 }
 for (i in 0 ..< files.size()) {
     fi = files[i]
@@ -192,7 +192,11 @@ for (i in 0 ..< files.size()) {
             altbg = "bgcolor=$alttxtbg"
         }
         if (newPar) {
-            	border = "border:1px solid transparent; border-top:5px solid  #aab7b8" 
+            if (j == 0 && markFiles) {
+                border = "border:1px solid transparent; border-top:5px solid $fileborder"
+            } else {
+                markPara ? border = "border:1px solid transparent; border-top:5px solid $paraborder" : ""
+            }
         }
         if (! ignore) {
             isDup = isDup.toString().toString().replaceAll(/NONE/, uniqStr).replaceAll(/FIRST/, firstStr).replaceAll(/NEXT/, repStr)
@@ -207,11 +211,17 @@ for (i in 0 ..< files.size()) {
             count++
         }
     }
-    table_contents << "  </table>\n"
-}
 
+}
+table_contents << "\n  </table>\n"
 table_contents << "</body>\n</html>"
 
+// create folder if it doesn't exist
+if (! (new File (folder)).exists()){
+    (new File(folder)).mkdir()
+    }
+
+table = new File(folder + filename + '.html')
 if (count > 0) {
     table.write(table_contents.toString().replaceAll("\\n\\s+\\n", '\n').trim(), 'UTF-8')
     echo(utils.format(resBundle("countWritten", countWritten), count, table))

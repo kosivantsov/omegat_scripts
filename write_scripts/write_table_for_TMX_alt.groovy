@@ -203,11 +203,11 @@ for (i in 0 ..< files.size()) {
             extraCont = "$isDup $isAlt"
             extraCell  = addExtraCol ? """<td style=\"$border\" $altbg width=\"$extraWidth%\">$extraCont</td>""" : ""
             table_contents << """
-  <tr>
-    $extraCell
-    <td $cellbg style=\"$border\" width=\"$srcWidth%\">$source</td>
-    <td $cellbg style=\"$border\" width=\"$targWidth%\">$target</td>
-  </tr>"""
+    <tr>
+      $extraCell
+      <td $cellbg style=\"$border\" width=\"$srcWidth%\">$source</td>
+      <td $cellbg style=\"$border\" width=\"$targWidth%\">$target</td>
+    </tr>"""
             count++
         }
     }

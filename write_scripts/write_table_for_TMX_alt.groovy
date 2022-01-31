@@ -143,6 +143,7 @@ if (all_project || cli) {
 } else {
     files = project.projectFiles.subList(editor.@displayedFileIndex, editor.@displayedFileIndex + 1)
     filename = Core.getEditor().getCurrentFile().replaceAll("[:\\\\/*\"?|<>' ]", "_")
+    markFiles = false
 }
 for (i in 0 ..< files.size()) {
     fi = files[i]

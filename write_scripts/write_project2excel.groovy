@@ -21,7 +21,7 @@
  * 
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
- * @latest:	 2022-02-01
+ * @latest:     2022-02-01
  * @version:    1.0.1
  */
 import static javax.swing.JOptionPane.*

@@ -21,8 +21,8 @@
  * 
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
- * @latest:	    2022-02-02
- * @version:    1.0
+ * @latest:	 2022-02-01
+ * @version:    1.0.1
  */
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
@@ -203,11 +203,11 @@ def segments = 0
 def sheetcount = 0
 
 //Get the number of additional rows to properly merge worksheet headers
-def filenameLastCell = 3
+def filenameLastCell = 2
 if (includeExtraCol)
     filenameLastCell++
 if (includeSegmentId)
-    filenameLastCell
+    filenameLastCell++
 if (includeCreatedId)
     filenameLastCell++
 if (includeChangedId)
@@ -291,10 +291,9 @@ for (i in 0 ..< files.size())
     }
     sheet.addCell(Label.newInstance(0, 0, curfilename, headerFormat))
     sheet.mergeCells(0, 0, 2, 0)
-    if (filenameLastCell > 3) {
+    if (filenameLastCell > 2) {
         sheet.addCell(Label.newInstance(3, 0, "", headerFormat))
-        if (filenameLastCell > 4)
-            sheet.mergeCells(3, 0, filenameLastCell, 0)
+        sheet.mergeCells(3, 0, filenameLastCell, 0)
     }
     sheet.setRowView(0, 480)
     columnNum = 0

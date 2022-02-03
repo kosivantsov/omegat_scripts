@@ -51,7 +51,7 @@ altStr           = "a"      //Extra cell text for alternative translation of the
 defStr           = ""       //Extra cell text for default translation of the segmnent
 notTranslated    = "NT"     //Extra cell text for segments with no translation (NOT empty, but untranslated)
 
-// Color Settings
+//Color Settings
 /*
 === Available colors: ===
 AQUA, AUTOMATIC, BLACK, BLUE, BLUE_GREY, BLUE2,

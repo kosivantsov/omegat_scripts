@@ -21,8 +21,8 @@
  * 
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
- * @latest:     2022-02-01
- * @version:    1.0.1
+ * @latest:     2022-02-03
+ * @version:    1.1
  */
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
@@ -51,6 +51,34 @@ altStr           = "a"      //Extra cell text for alternative translation of the
 defStr           = ""       //Extra cell text for default translation of the segmnent
 notTranslated    = "NT"     //Extra cell text for segments with no translation (NOT empty, but untranslated)
 
+// Color Settings
+/*
+=== Available colors: ===
+AQUA, AUTOMATIC, BLACK, BLUE, BLUE_GREY, BLUE2,
+BRIGHT_GREEN, BROWN, CORAL, DARK_BLUE, DARK_BLUE2,
+DARK_GREEN, DARK_PURPLE, DARK_RED, DARK_RED2, DARK_TEAL,
+DARK_YELLOW, DEFAULT_BACKGROUND, DEFAULT_BACKGROUND1,
+GOLD, GRAY_25, GRAY_50, GRAY_80, GREEN,
+GREY_25_PERCENT, GREY_40_PERCENT, GREY_50_PERCENT, GREY_80_PERCENT,
+ICE_BLUE, INDIGO, IVORY, LAVENDER, LIGHT_BLUE, LIGHT_GREEN,
+LIGHT_ORANGE, LIGHT_TURQUOISE, LIGHT_TURQUOISE2, LIME,
+OCEAN_BLUE, OLIVE_GREEN, ORANGE, PALE_BLUE, PALETTE_BLACK,
+PERIWINKLE, PINK, PINK2, PLUM, PLUM2, RED, ROSE, SEA_GREEN,
+SKY_BLUE, TAN, TEAL, TEAL2, TURQOISE2, TURQUOISE, UNKNOWN,
+VERY_LIGHT_YELLOW, VIOLET, VIOLET2, WHITE, YELLOW, YELLOW2
+=========================
+*/
+headerFontColor    = "IVORY"               //Font color for the first row on each sheet
+headerBgColor      = "GRAY_80"             //Background color for the first row
+colHeaderFontColor = "BLACK"               //Font color for columns header
+colHeaderBgColor   = "GRAY_50"             //Background color for column headers
+segNumFontColor    = "BLACK"               //Font color for columns header
+segNumBgColor      = "GRAY_50"             //Background color for column headers
+baseFontColor      = "BLACK"               //Font color for source and text segments
+repeatBgColor      = "LIGHT_TURQUOISE2"    //Background color for repeated segments
+noteBgColor        = "VERY_LIGHT_YELLOW"   //Background color for notes
+altFontColor       = "DARK_TEAL"           //Font color for segments with alternative translations
+altBgColor         = "TEAL2"               //Background color for alternative mark
 
 //UI Strings
 name="Write Excel Table for Revision (multiple sheets)"
@@ -139,37 +167,37 @@ if (! (new File (folder)).exists()) {
 
 //Header formatting for each sheet
 headerFormat = WritableCellFormat.newInstance() //headers in each worksheet
-headerFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 15, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour.IVORY))
+headerFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 15, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour."$headerFontColor"))
 headerFormat.setAlignment(Alignment.CENTRE)
 headerFormat.setVerticalAlignment(VerticalAlignment.CENTRE)
 headerFormat.setWrap(true)
 headerFormat.setShrinkToFit(true)
-headerFormat.setBackground(Colour.GRAY_80)
+headerFormat.setBackground(Colour."$headerBgColor")
 
 //Bigger bold text
 boldFormat = WritableCellFormat.newInstance()
-boldFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 12, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour.BLACK))
+boldFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 12, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour."$colHeaderFontColor"))
 boldFormat.setAlignment(Alignment.CENTRE)
 boldFormat.setVerticalAlignment(VerticalAlignment.CENTRE)
 boldFormat.setWrap(true)
 boldFormat.setShrinkToFit(true)
-boldFormat.setBackground(Colour.GRAY_50)
+boldFormat.setBackground(Colour."$colHeaderBgColor")
 
 //Smaller bold text
 boldsFormat = WritableCellFormat.newInstance() 
-boldsFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 9, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour.BLACK))
+boldsFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 9, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour."$colHeaderFontColor"))
 boldsFormat.setAlignment(Alignment.LEFT)
 boldsFormat.setVerticalAlignment(VerticalAlignment.CENTRE)
 boldsFormat.setWrap(true)
 boldsFormat.setShrinkToFit(true)
-boldsFormat.setBackground(Colour.GRAY_50)
+boldsFormat.setBackground(Colour."$colHeaderBgColor")
 
 //Segment number formatting
 segFormat = WritableCellFormat.newInstance()
-segFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 9, WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour.BLACK))
+segFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 9, WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour."$segNumFontColor"))
 segFormat.setVerticalAlignment(VerticalAlignment.CENTRE)
 segFormat.setAlignment(Alignment.RIGHT)
-segFormat.setBackground(Colour.GRAY_50)
+segFormat.setBackground(Colour."$segNumBgColor")
 
 //Filenames formatting
 fileFormat = WritableCellFormat.newInstance()
@@ -178,7 +206,7 @@ fileFormat.setWrap(true)
 
 //Base formatting for source and target text. It will be expanded according to the segment specifics
 textFormat = WritableCellFormat.newInstance()
-textFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 11, WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour.BLACK))
+textFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 11, WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour."$baseFontColor"))
 textFormat.setVerticalAlignment(VerticalAlignment.CENTRE)
 textFormat.setAlignment(Alignment.LEFT)
 textFormat.setWrap(true)
@@ -354,13 +382,13 @@ for (i in 0 ..< files.size())
             extraCont = "$notTranslated "
         }
         if (isDup.toString() != 'NONE' && markNonUniq) {
-            finalTextFormat.setBackground(Colour.GRAY_25, Pattern.GRAY_25)
+            finalTextFormat.setBackground(Colour."$repeatBgColor")
         }
         if (isAlt == altStr && markAlt) {
             finalTextFormat.setBorder(Border.RIGHT, BorderLineStyle.THICK)
             finalTextFormat.setBorder(Border.LEFT, BorderLineStyle.THICK)
-            finalTextFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 11, WritableFont.BOLD, true, UnderlineStyle.NO_UNDERLINE, Colour.DARK_TEAL))
-            extraFormat.setBackground(Colour.TEAL2)
+            finalTextFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 11, WritableFont.BOLD, true, UnderlineStyle.NO_UNDERLINE, Colour."$altFontColor"))
+            extraFormat.setBackground(Colour."$altBgColor")
         }
         isDup = isDup.toString().toString().replaceAll(/NONE/, uniqStr).replaceAll(/FIRST/, firstStr).replaceAll(/NEXT/, repStr)
         extraCont = extraCont + "$isDup $isAlt"
@@ -392,7 +420,7 @@ for (i in 0 ..< files.size())
         }
         if (includeNotes) {
         noteFormat = WritableCellFormat.newInstance(metaFormat)
-        info.note ? noteFormat.setBackground(Colour.VERY_LIGHT_YELLOW) : ""
+        info.note ? noteFormat.setBackground(Colour."$noteBgColor") : ""
             sheet.addCell(Label.newInstance(columnNum, count + 1, info.note, noteFormat))
             columnNum++
         }

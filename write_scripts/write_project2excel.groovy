@@ -22,7 +22,7 @@
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
  * @latest:     2022-02-03
- * @version:    1.1
+ * @version:    1.2
  */
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*

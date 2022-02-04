@@ -70,10 +70,10 @@ VERY_LIGHT_YELLOW, VIOLET, VIOLET2, WHITE, YELLOW, YELLOW2
 */
 headerFontColor    = "IVORY"               //Font color for the first row on each sheet
 headerBgColor      = "GRAY_80"             //Background color for the first row
-colHeaderFontColor = "BLACK"               //Font color for columns header
+colHeaderFontColor = "BLACK"               //Font color for column headers
 colHeaderBgColor   = "GRAY_50"             //Background color for column headers
-segNumFontColor    = "BLACK"               //Font color for columns header
-segNumBgColor      = "GRAY_50"             //Background color for column headers
+segNumFontColor    = "BLACK"               //Font color for segment numbers
+segNumBgColor      = "GRAY_50"             //Background color for for segment numbers
 baseFontColor      = "BLACK"               //Font color for source and text segments
 repeatBgColor      = "LIGHT_TURQUOISE2"    //Background color for repeated segments
 noteBgColor        = "VERY_LIGHT_YELLOW"   //Background color for notes

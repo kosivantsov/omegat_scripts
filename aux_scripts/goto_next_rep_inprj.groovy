@@ -1,10 +1,10 @@
-/* :name=GoTo - Next non-unique segment :description=Jump to next non-unique
+/* :name=GoTo - Next Repetition in Project :description=Jump to the next repetition found in the project
  *  
  *  @author:   Kos Ivantsov
  *  @date:     2021-05-01
  *  @version:  0.1         
  */
- 
+
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
 

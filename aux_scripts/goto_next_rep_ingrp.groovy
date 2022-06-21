@@ -1,4 +1,4 @@
-/* :name=GoTo - Next repetition :description=Jump to the next repetition
+/* :name=GoTo - Next Repetition in Group :description=Jump to the next segment in a group of repetitions
  *  
  *  @author:   Kos Ivantsov
  *  @date:     2022-05-05

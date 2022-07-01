@@ -31,6 +31,9 @@ def gui() {
         stn = project.allEntries[nextSegmentNumber -1]
         info = project.getTranslationInfo(stn)
         isDup = stn.getDuplicate()
+        if (nextSegmentNumber == startingSegmentNumber) {
+            return
+        }
         if ("$isDup" != "NONE") {
             jump = true
             editor.gotoEntry(nextSegmentNumber)
@@ -38,9 +41,6 @@ def gui() {
         } else {
             jump = false
             currentSegmentNumber = nextSegmentNumber
-        }
-        if (nextSegmentNumber == startingSegmentNumber) {
-            return
         }
     }
 }

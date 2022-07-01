@@ -32,6 +32,9 @@ def gui() {
         stn = project.allEntries[nextSegmentNumber -1]
         info = project.getTranslationInfo(stn)
         isXEnforce = info.linked.toString()
+        if (nextSegmentNumber == startingSegmentNumber) {
+            return
+        }
         if (isXEnforce == "xENFORCED") {
             jump = true
             editor.gotoEntry(nextSegmentNumber)
@@ -39,9 +42,6 @@ def gui() {
         } else {
             jump = false
             currentSegmentNumber = nextSegmentNumber
-        }
-        if (nextSegmentNumber == startingSegmentNumber) {
-            return
         }
     }
 }

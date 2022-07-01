@@ -28,6 +28,9 @@ def gui() {
         stn = project.allEntries[nextSegmentNumber -1]
         startSource = ste.getSrcText()
         checkSource = stn.getSrcText()
+        if (nextSegmentNumber == startingSegmentNumber) {
+            return
+        }
         if (startSource == checkSource) {
             jump = true
             editor.gotoEntry(nextSegmentNumber)
@@ -35,9 +38,6 @@ def gui() {
         } else {
             jump = false
             currentSegmentNumber = nextSegmentNumber
-        }
-        if (nextSegmentNumber == startingSegmentNumber) {
-            return
         }
     }
 }

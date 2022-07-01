@@ -21,7 +21,7 @@ def gui() {
     if (exit)
     return
     ste = editor.getCurrentEntry()
-    currentSegmentNumber = ste.entryNum()
+    currentSegmentNumber = startingSegmentNumber = ste.entryNum()
     //jump = false
     while (!jump) {
         nextSegmentNumber = currentSegmentNumber == lastSegmentNumber ? 1 : currentSegmentNumber + 1
@@ -35,6 +35,9 @@ def gui() {
         } else {
             jump = false
             currentSegmentNumber = nextSegmentNumber
+        }
+        if (nextSegmentNumber == startingSegmentNumber) {
+            return
         }
     }
 }

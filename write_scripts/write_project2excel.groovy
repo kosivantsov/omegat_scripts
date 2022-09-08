@@ -21,7 +21,7 @@
  * 
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
- * @latest:     2022-02-03
+ * @latest:     2022-09-08
  * @version:    1.2
  */
 import static javax.swing.JOptionPane.*
@@ -38,7 +38,8 @@ autoopen         = "none"   //Automatically open the table file upon creation ("
 includeSegmentId = true     //Add a column for segment ID
 includeCreatedId = true     //Add a column for the original author
 includeChangedId = true     //Add a column for the author of changes
-includeNotes     = true     //Add a column for segment notes
+includeNotes     = true     //Add a column for segment notes added by translator(s)
+includeComments  = true     //Add a column for segment comments coming from the source file (if the filter supports it)
 includeExtraCol  = true     //Add a column with info about uniqness and alternative translation
 fillEmptTran     = true     //Add custom string to empty translations, i.e. where translation is INTENTIONALLY set to empty (true|false)
 markNonUniq      = true     //Add color background to non-unique segments
@@ -51,7 +52,7 @@ altStr           = "a"      //Extra cell text for alternative translation of the
 defStr           = ""       //Extra cell text for default translation of the segmnent
 notTranslated    = "NT"     //Extra cell text for segments with no translation (NOT empty, but untranslated)
 
-//Color Settings
+// Color Settings
 /*
 === Available colors: ===
 AQUA, AUTOMATIC, BLACK, BLUE, BLUE_GREY, BLUE2,
@@ -73,10 +74,11 @@ headerBgColor      = "GRAY_80"             //Background color for the first row
 colHeaderFontColor = "BLACK"               //Font color for column headers
 colHeaderBgColor   = "GRAY_50"             //Background color for column headers
 segNumFontColor    = "BLACK"               //Font color for segment numbers
-segNumBgColor      = "GRAY_50"             //Background color for for segment numbers
+segNumBgColor      = "GRAY_50"             //Background color for segment numbers
 baseFontColor      = "BLACK"               //Font color for source and text segments
 repeatBgColor      = "LIGHT_TURQUOISE2"    //Background color for repeated segments
 noteBgColor        = "VERY_LIGHT_YELLOW"   //Background color for notes
+commentBgColor     = "PALE_BLUE"           //Background color for comments
 altFontColor       = "DARK_TEAL"           //Font color for segments with alternative translations
 altBgColor         = "TEAL2"               //Background color for alternative mark
 
@@ -96,6 +98,7 @@ createdID="Created"
 changedID="Changed"
 n_a = "N/A"
 note = "Note"
+comment = "Comment"
 message="{0} segments written to {1}"
 
 //// CLI or GUI probing
@@ -242,6 +245,8 @@ if (includeChangedId)
     filenameLastCell++
 if (includeNotes)
     filenameLastCell++
+if (includeComments)
+    filenameLastCell++
 
 //Now go through the files and enties and collect data to populate sheets
 files = project.projectFiles
@@ -252,7 +257,7 @@ for (i in 0 ..< files.size())
     sheetname = (sheetcount+1).toString()
     
     //Get the longest string in source and target to set their column widths
-    //    (so it's not to long for files with only short segments)
+    //    (so it's not too long for the files with only short segments)
     def sourceLength = []
     def targetLength = []
     fi.entries.each {
@@ -317,6 +322,10 @@ for (i in 0 ..< files.size())
         headerNum++
         sheet.setColumnView(headerNum, 50)
     }
+    if (includeComments) {
+        headerNum++
+        sheet.setColumnView(headerNum, 50)
+    }
     sheet.addCell(Label.newInstance(0, 0, curfilename, headerFormat))
     sheet.mergeCells(0, 0, 2, 0)
     if (filenameLastCell > 2) {
@@ -349,6 +358,10 @@ for (i in 0 ..< files.size())
     }
     if (includeNotes) {
         sheet.addCell(Label.newInstance(columnNum, 1, resBundle("note", note), boldFormat))
+        columnNum++
+    }
+    if (includeComments) {
+        sheet.addCell(Label.newInstance(columnNum, 1, resBundle("comment", comment), boldFormat))
         columnNum++
     }
     sheetcount++
@@ -419,9 +432,16 @@ for (i in 0 ..< files.size())
             columnNum++
         }
         if (includeNotes) {
-        noteFormat = WritableCellFormat.newInstance(metaFormat)
-        info.note ? noteFormat.setBackground(Colour."$noteBgColor") : ""
+            noteFormat = WritableCellFormat.newInstance(metaFormat)
+            info.note ? noteFormat.setBackground(Colour."$noteBgColor") : ""
             sheet.addCell(Label.newInstance(columnNum, count + 1, info.note, noteFormat))
+            columnNum++
+        }
+        if (includeComments) {
+            commentFormat = WritableCellFormat.newInstance(metaFormat)
+            def comment = ste.getComment() ? ste.getComment() : ""
+            ste.getComment() ? commentFormat.setBackground(Colour."$commentBgColor") : ""
+            sheet.addCell(Label.newInstance(columnNum, count + 1, comment, commentFormat))
             columnNum++
         }
         count = count + 1

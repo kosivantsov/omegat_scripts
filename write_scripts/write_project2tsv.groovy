@@ -241,9 +241,9 @@ for (i in 0 ..< files.size()) {
 if (count > 0) {
     tsvStringData = tsvData.toString()
     // Some cleanup on the collected data
-    tsvStringData = tsvStringData.replaceAll(/\u240B\n/, "\n")
-    tsvStringData = tsvStringData.replaceAll(/\u240B/, "\t")
-    tsvStringData = tsvStringData.replaceAll(/\u2007/, "")
+    tsvStringData = tsvStringData.replaceAll("\u240B\n", "\n")
+    tsvStringData = tsvStringData.replaceAll("\u240B", "\t")
+    tsvStringData = tsvStringData.replaceAll("\u2007", "")
     projectname = new File(prop.getProjectRoot()).getName().toString()
     tsvFileName = projectname + " ($srcCode - $tgtCode).tsv"
     folder = prop.projectRoot+'script_output'+File.separator

@@ -141,6 +141,9 @@ if (langCodeHead) {
 tsvData = new StringWriter()
 
 //// Check which fields should be present in the TSV file, and get their values
+//   Then add it to the StringWriter
+//   \u240B is used instead of the TAB (in case there are TABs in source or target)
+//   \u240B will be changed back to TAB at the end, during the cleanup
 collectData = {
     String tsvTemp = ""
     for (c in 0..tsvFields.size()-1) {
@@ -150,12 +153,13 @@ collectData = {
     tsvData << "${tsvTemp}\n"
 }
 
-//// Create the header line
+//// Create the header line (at this stage the used values are as defined above)
 collectData()
 
 //// Traverse the whole project and collect the data
-files = project.projectFiles
+//   Count is used to calculate the processed segments
 count = 0
+files = project.projectFiles
 for (i in 0 ..< files.size()) {
     fi = files[i]
     for (j in 0 ..< fi.entries.size()) {
@@ -228,6 +232,7 @@ for (i in 0 ..< files.size()) {
         tsvMap.origin        = origin
 
         // Add a new line to the StringWriter with the collected data from the processed segment
+        // At this stage the values have been set according to the segment data
         collectData()
         count++
 	}

@@ -1,11 +1,9 @@
 /* :name=  Merge or split segments :description= \
- *         Merge current segment with the next or split it at the selection
+ *         Merge current segment with the next or split it at the cursor (if in source text)
  * 
- * @author  Yu Tang, Dimitry Prihodko, Kos Ivantsov
- * @date    2019-11-23
- * @version 0.4.12
- *
- *         !!! Make sure that this script is used with its .properties file !!!
+ * @author  Yu Tang, Kos Ivantsov
+ * @date    2022-12-02
+ * @version 0.5
  */
 import org.apache.commons.lang.WordUtils
 import org.omegat.core.segmentation.MapRule
@@ -21,25 +19,68 @@ import static javax.swing.JOptionPane.*
 import static org.omegat.util.StaticUtils.*
 import static org.omegat.util.StringUtil.*
 
+//// External resources hack (use hardcoded strings if .properties file isn't found)
+resBundle = { k,v ->
+    try {
+        v = res.getString(k)
+    }
+    catch (MissingResourceException e) {
+        v
+    }
+}
+
+//// UI Strings
+name="Merge or split segments"
+description="Merge current segment with the next, or split it at the cursor location"
+
+noNewRule="No new rule added." 
+newSegmentationActive="New segmentation rule activated."
+splitMessage="Split result:" 
+mergeMessage="Merge result:" 
+proceed="Proceed?"
+noMappingRule="MappingRule for the source language is not found." 
+ruleExists="This rule already exists." 
+terminating=" Terminating now!"
+noReload="New rule added, but it will be activated only after the project is reloaded."
+noProjectOpen="No project open!" 
+noProjectSegmentation="The script works only with the project-specific segmentation rules!" 
+noMerge="Merging with the next segment is not possible!" 
+noSplit="Split point should not be at the beginning or the end of the source text!"
+mergeTitle="Merging Segments"
+splitTitle="Splitting Current Segment"
+
+
 org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
 
     utils = (StringUtil.getMethods().toString().findAll("makeValidXML")) ? StringUtil : StaticUtils
 
-    //check if we have selection at the end of the current source
-    def entry = editor.currentEntry
-    def src = entry.srcText
-    def split
-    if (editor.selectedText) {
-        sel = editor.selectedText
-        split = src.endsWith(sel) ? true : false
-        if (split) {
-            console.println(res.getString("endSelected"))
-        }else{
-            console.println(res.getString("wrongSelected"))
-        }
+    //check if the caret is in the source text
+    entry = editor.currentEntry
+    src = entry.srcText
+    position = editor.editor.getCaretPosition()
+    srcEnd = editor.editor.getOmDocument().getTranslationStart() - 1
+    srcStart = srcEnd - src.size()
+    srcRange = srcStart+1..srcEnd-1
+    //if the caret is in the source text of the current segment, we split
+    split = srcRange.contains(position) ? true : false
+    //if the caret is at the beginning or end of the source text, splitting won't make sense
+    boundry = position.equals(srcStart) || position.equals(srcEnd) ? true : false
+    if (boundry) {
+        message = resBundle("noSplit", noSplit) + resBundle("terminating", terminating)
+        message.alert()
+        return
     }
-
-    split = split ? true : false
+    nextEntry = project.allEntries[entry.entryNum()] ? project.allEntries[entry.entryNum()] : null
+    // merge is to see if the merge is possible at all (would not be before the paragraph start)
+    if (!nextEntry) {
+        merge = false
+    } else {
+        merge = nextEntry.paragraphStart ? false : true
+    }
+    //get fragments to split or merge
+    String nextSeg = entry.key.next ? entry.key.next : ""
+    String beforeBreak = split ? src.substring(0, position - srcStart) : entry.srcText
+    String afterBreak = split ? src.substring(position - srcStart, src.size()): nextSeg
 
     initializeScript()
 
@@ -48,18 +89,11 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         return
     }
 
-    //get fragments to split or merge
-    def nxtEntry = project.allEntries[entry.entryNum()]
-    String nextSeg = entry.key.next ? entry.key.next : nxtEntry.srcText
-    String beforeBreak = split ? src - sel : entry.srcText
-    String afterBreak = split ? sel : nextSeg
-
-
-    // exists check for the MappingRule
+    // check for the MappingRule
     Language srcLang = project.projectProperties.sourceLanguage
     def mapRule = project.projectProperties.projectSRX.findMappingRule(srcLang)
     if (! mapRule) {
-        message = res.getString("noMappingRule") + res.getString("terminating")
+        message = resBundle("noMappingRule", noMappingRule) + resBundle("terminating", terminating)
         message.alert()
         return
     }
@@ -70,11 +104,11 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         separator = " "
     }
     String message = split ?
-    WordUtils.wrap("$beforeBreak\n\n$afterBreak\n\n", 180) + res.getString("proceed") :
-    WordUtils.wrap("$beforeBreak$separator$afterBreak\n\n", 180) + res.getString("proceed")
+    WordUtils.wrap("<html><i><b>$beforeBreak</b></i></html>\n\n<html><i><b>$afterBreak</b></i></html>\n\n", 400) + resBundle("proceed", proceed) :
+    WordUtils.wrap("<html><i><b>$beforeBreak$separator$afterBreak</b></i></html>\n\n", 400) + resBundle("proceed", proceed)
     if (message.confirm() != 0) {
         console.clear()
-        console.println(res.getString("noNewRule"))
+        console.println(resBundle("noNewRule", noNewRule))
         return
     }
 
@@ -101,7 +135,7 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         it.beforebreak == beforeBreak && it.afterbreak == afterBreak
     }
     if (found) {
-        message = res.getString("ruleExists") + res.getString("terminating")
+        message = resBundle("ruleExists", ruleExists) + resBundle("terminating", terminating)
         message.alert()
         return
     }
@@ -114,107 +148,114 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         OStrings.getString("MW_REOPEN_TITLE"), JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
         org.omegat.gui.main.ProjectUICommands.projectReload()
     } else {
-        console.print(res.getString("noReload"))
+        console.print(resBundle("noReload", noReload))
         return
     }
 
     // fin
-    console.println(res.getString("newSegmentationActive") + "(${new Date().timeString})")
+    console.println(resBundle("newSegmentationActive", newSegmentationActive) + "(${new Date().timeString})")
 
 } as Runnable
 
 // ******************************************************
 // methods
 // ******************************************************
-    public static String escapeNonRegex(String text) {
-        return escapeNonRegex(text, true);
+public static String escapeNonRegex(String text) {
+    return escapeNonRegex(text, true)
+}
+
+/**
+ * Escapes the passed string for use in regex matching, so special regex
+ * characters are interpreted as normal characters during regex searches.
+ *
+ * This is done by prepending a backslash before each occurrence of the
+ * following characters: \^.+[]{}()&|-:=!<>
+ *
+ * If the parameter escapeWildcards is true, asterisks (*) and questions
+ * marks (?) will also be escaped. If false, these will be converted to
+ * regex tokens (* ->
+ *
+ * @param text
+ *            The text to escape
+ * @param escapeWildcards
+ *            If true, asterisks and question marks are also escaped. If
+ *            false, these are converted to there regex equivalents.
+ *
+ * @return The escaped text
+ */
+public static String escapeNonRegex(String text, boolean escapeWildcards) {
+    // handle backslash
+    text = text.replaceAll("\\\\", "\\\\\\\\"); // yes, that's the correct
+                                                // nr of backslashes
+
+    // String escape = "^.*+[]{}()&|-:=?!<>";
+    for (char c : "^.+[]{}()&|-:=!<>".toCharArray()) {
+        text = text.replaceAll("\\" + c, "\\\\" + c)
     }
 
-    /**
-     * Escapes the passed string for use in regex matching, so special regex
-     * characters are interpreted as normal characters during regex searches.
-     *
-     * This is done by prepending a backslash before each occurrence of the
-     * following characters: \^.+[]{}()&|-:=!<>
-     *
-     * If the parameter escapeWildcards is true, asterisks (*) and questions
-     * marks (?) will also be escaped. If false, these will be converted to
-     * regex tokens (* ->
-     *
-     * @param text
-     *            The text to escape
-     * @param escapeWildcards
-     *            If true, asterisks and question marks are also escaped. If
-     *            false, these are converted to there regex equivalents.
-     *
-     * @return The escaped text
-     */
-    public static String escapeNonRegex(String text, boolean escapeWildcards) {
-        // handle backslash
-        text = text.replaceAll("\\\\", "\\\\\\\\"); // yes, that's the correct
-                                                    // nr of backslashes
-
-        // String escape = "^.*+[]{}()&|-:=?!<>";
-        for (char c : "^.+[]{}()&|-:=!<>".toCharArray()) {
-            text = text.replaceAll("\\" + c, "\\\\" + c);
-        }
-
-        // handle "wildcard characters" ? and * (only if requested)
-        // do this last, or the additional period (.) will cause trouble
-        if (escapeWildcards) {
-            // simply escape * and ?
-            text = text.replaceAll("\\?", "\\\\?");
-            text = text.replaceAll("\\*", "\\\\*");
-        } else {
-            // convert * (0 or more characters) and ? (1 character)
-            // to their regex equivalents (\S* and \S? respectively)
-            // text = text.replaceAll("\\?", "\\S?"); // do ? first, or * will
-            // be converted twice
-            // text = text.replaceAll("\\*", "\\S*");
-            // The above lines were not working:
-            // [ 1680081 ] Search: simple wilcards do not work
-            // The following correction was contributed by Tiago Saboga
-            text = text.replaceAll("\\?", "\\\\S"); // do ? first, or * will be
-                                                    // converted twice
-            text = text.replaceAll("\\*", "\\\\S*");
-        }
-        //make tags optional
-        text = text.replaceAll(/(\\\<\/?\w+\d+\s?\/?\\\>)/, /\($1\)\?/) 
-        return text;
+    // handle "wildcard characters" ? and * (only if requested)
+    // do this last, or the additional period (.) will cause trouble
+    if (escapeWildcards) {
+        // simply escape * and ?
+        text = text.replaceAll("\\?", "\\\\?")
+        text = text.replaceAll("\\*", "\\\\*")
+    } else {
+        // convert * (0 or more characters) and ? (1 character)
+        // to their regex equivalents (\S* and \S? respectively)
+        // text = text.replaceAll("\\?", "\\S?"); // do ? first, or * will
+        // be converted twice
+        // text = text.replaceAll("\\*", "\\S*")
+        // The above lines were not working:
+        // [ 1680081 ] Search: simple wilcards do not work
+        // The following correction was contributed by Tiago Saboga
+        text = text.replaceAll("\\?", "\\\\S")    // do ? first, or * will be
+                                                  // converted twice
+        text = text.replaceAll("\\*", "\\\\S*")
     }
+    //make tags optional
+    text = text.replaceAll(/(\\\<\/?\w+\d+\s?\/?\\\>)/, /\($1\)\?/) 
+    return text
+}
+
+boolean isSplit() {
+    entry = editor.currentEntry
+    src = entry.srcText
+    position = editor.editor.getCaretPosition()
+    srcEnd = editor.editor.getOmDocument().getTranslationStart() - 1
+    srcStart = srcEnd - src.size()
+    srcRange = srcStart+1..srcEnd-1
+    //if the caret is in the source text of the current segment, we split
+    split = srcRange.contains(position) ? true : false    
+    return split
+}
+
+boolean isMerge() {
+    def nextEntry = project.allEntries[entry.entryNum()] ? project.allEntries[entry.entryNum()] : null
+    if (!nextEntry) {
+        merge = false
+    } else {
+        merge = nextEntry.paragraphStart ? false : true
+    }
+    return merge
+}
 
 boolean isReadyForNewRule() {
     if (! project.isProjectLoaded()) {
-        message = res.getString("noProjectOpen") + res.getString("terminating")
+        message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
         return message.alert()
     }
 
     def srx = project.projectProperties.projectSRX
     if (! srx) {
-        message = res.getString("noProjectSegmentation") + res.getString("terminating")
+        message = resBundle("noProjectSegmentation", noProjectSegmentation) + resBundle("terminating", terminating)
         return message.alert()
     }
 
-    def entry = editor.currentEntry
-    def src = entry.srcText
-    def allProjEntries = project.allEntries
-    def nxtEntry = allProjEntries[entry.entryNum()]
-    String nextSeg = entry.key.next ? entry.key.next : nxtEntry.srcText
-    def split
-    def sel
-    if (editor.selectedText) {
-        sel = editor.selectedText
-        split = src.endsWith(sel) ? true : false
-    }
-    split = split ? true :false
-
-    if (! split && (! entry.srcText || ! nextSeg)) {
-        message = res.getString("noMerge") + res.getString("terminating")
-        return message.alert()
-    }
+    split = isSplit()
+    merge = isMerge()
     
-    if ( split && (src == sel) ) {
-        message = res.getString("noSplit") + res.getString("terminating")
+    if (! split && ! merge) {
+        message = resBundle("noMerge", noMerge) + resBundle("terminating", terminating)
         return message.alert()
     }
 
@@ -223,14 +264,8 @@ boolean isReadyForNewRule() {
 }
 
 void initializeScript() {
-
-    def entry = editor.currentEntry
-    def src = entry.srcText
-    def split
-    if (editor.selectedText) {
-        def sel = editor.selectedText
-        split = src.endsWith(sel) ? true : false
-    }
+    split = isSplit()
+    merge = isMerge()
 
     // String class
     String.metaClass.toXML = { ->
@@ -240,11 +275,11 @@ void initializeScript() {
         escapeNonRegex(delegate as String)
     }
     String.metaClass.alert = { ->
-        showMessageDialog null, delegate, split ? res.getString("splitTitle") : res.getString("mergeTitle"), INFORMATION_MESSAGE
+        showMessageDialog null, delegate, split ? resBundle("splitTitle", splitTitle) : resBundle("mergeTitle", mergeTitle), INFORMATION_MESSAGE
         false
     }
     String.metaClass.confirm = { ->
-        showConfirmDialog null, delegate, split ? res.getString("splitMessage") : res.getString("mergeMessage"), YES_NO_OPTION
+        showConfirmDialog null, delegate, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION
     }
 
     // SRX class

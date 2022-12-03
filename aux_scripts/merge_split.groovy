@@ -2,23 +2,27 @@
  *         Merge current segment with the next or split it at the cursor (if in source text)
  * 
  * @author  Yu Tang, Kos Ivantsov
- * @date    2022-12-02
- * @version 0.5
+ * @date    2022-12-03
+ * @version 1.0
  */
+import javax.swing.JOptionPane
 import org.apache.commons.lang.WordUtils
+import org.omegat.core.segmentation.datamodels.MappingRulesModel
 import org.omegat.core.segmentation.MapRule
 import org.omegat.core.segmentation.Rule
 import org.omegat.core.segmentation.SRX
 import org.omegat.util.Language
 import org.omegat.util.OStrings
+import org.omegat.util.Preferences
 import org.omegat.util.StaticUtils
 import org.omegat.util.StringUtil
-import javax.swing.JOptionPane
 
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.StaticUtils.*
 import static org.omegat.util.StringUtil.*
 
+enforceProjectSRX = true
+separateMappingRule = true
 //// External resources hack (use hardcoded strings if .properties file isn't found)
 resBundle = { k,v ->
     try {
@@ -33,6 +37,7 @@ resBundle = { k,v ->
 name="Merge or split segments"
 description="Merge current segment with the next, or split it at the cursor location"
 
+srxEnabled="Project-specific segmentation rules have been enabled.\nRun the script again after the project is reloaded."
 noNewRule="No new rule added." 
 newSegmentationActive="New segmentation rule activated."
 splitMessage="Split result:" 
@@ -48,7 +53,6 @@ noMerge="Merging with the next segment is not possible!"
 noSplit="Split point should not be at the beginning or the end of the source text!"
 mergeTitle="Merging Segments"
 splitTitle="Splitting Current Segment"
-
 
 org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
 
@@ -88,9 +92,29 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     if (! isReadyForNewRule()) {
         return
     }
+    // Enforcing per-project srx
+    if (! project.projectProperties.projectSRX && enforceProjectSRX) {
+        srx = Preferences.getSRX()
+        projectSRX = srx.copy()
+        projectSRXFile = new File(project.projectProperties.getProjectInternal() + "segmentation.conf")
+        projectSRX.saveTo(projectSRX, projectSRXFile)
+        project.projectProperties.setProjectSRX(projectSRX)
+        message = resBundle("srxEnabled", srxEnabled)
+        message.alert()
+        org.omegat.gui.main.ProjectUICommands.projectReload()
+        return
+    }
+    srx = project.projectProperties.getProjectSRX()
 
     // check for the MappingRule
     Language srcLang = project.projectProperties.sourceLanguage
+    srcCode = srcLang.getLanguageCode().toUpperCase()
+    if (separateMappingRule) {
+        mergeSplitMapRule = new MapRule("MergeSplit", "$srcCode.*", new ArrayList<>())
+        if (! srx.getMappingRules()[0].toString().contains("MergeSplit ($srcCode.*)")) {
+            srx.getMappingRules().add(0, mergeSplitMapRule)
+        }
+    }
     def mapRule = project.projectProperties.projectSRX.findMappingRule(srcLang)
     if (! mapRule) {
         message = resBundle("noMappingRule", noMappingRule) + resBundle("terminating", terminating)
@@ -104,8 +128,8 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         separator = " "
     }
     String message = split ?
-    WordUtils.wrap("<html><i><b>$beforeBreak</b></i></html>\n\n<html><i><b>$afterBreak</b></i></html>\n\n", 400) + resBundle("proceed", proceed) :
-    WordUtils.wrap("<html><i><b>$beforeBreak$separator$afterBreak</b></i></html>\n\n", 400) + resBundle("proceed", proceed)
+    WordUtils.wrap("<html><i><b>$beforeBreak</b></i></html>\n\n<html><i><b>$afterBreak</b></i></html>\n\n", 150, "<br/>", false) + resBundle("proceed", proceed) :
+    WordUtils.wrap("<html><i><b>$beforeBreak$separator$afterBreak</b></i></html>\n\n", 150, "<br/>", false) + resBundle("proceed", proceed)
     if (message.confirm() != 0) {
         console.clear()
         console.println(resBundle("noNewRule", noNewRule))
@@ -242,11 +266,12 @@ boolean isMerge() {
 boolean isReadyForNewRule() {
     if (! project.isProjectLoaded()) {
         message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
+        //console.println(message)
         return message.alert()
     }
 
     def srx = project.projectProperties.projectSRX
-    if (! srx) {
+    if (! srx && ! enforceProjectSRX) {
         message = resBundle("noProjectSegmentation", noProjectSegmentation) + resBundle("terminating", terminating)
         return message.alert()
     }

@@ -2,8 +2,8 @@
  *         Merge current segment with the next or split it at the cursor (if in source text)
  * 
  * @author  Yu Tang, Kos Ivantsov
- * @date    2022-12-03
- * @version 1.0
+ * @date    2022-12-05
+ * @version 1.1
  */
 import javax.swing.JOptionPane
 import org.apache.commons.lang.WordUtils
@@ -21,8 +21,13 @@ import static javax.swing.JOptionPane.*
 import static org.omegat.util.StaticUtils.*
 import static org.omegat.util.StringUtil.*
 
-enforceProjectSRX = true
-separateMappingRule = true
+enforceProjectSRX   = true   //if true, the script will make sure project-specific segmentation is enabled
+separateMappingRule = true   //if true, the script will add a separate group for its rules
+showTags            = true   //if false, in the confirmation message tags won't be shown
+paintTags           = true   //if true, tags will be shown in different font size and color
+tagColor            = "gray" //tag color
+tagSize             = 1      //tag size
+
 //// External resources hack (use hardcoded strings if .properties file isn't found)
 resBundle = { k,v ->
     try {
@@ -53,6 +58,15 @@ noMerge="Merging with the next segment is not possible!"
 noSplit="Split point should not be at the beginning or the end of the source text!"
 mergeTitle="Merging Segments"
 splitTitle="Splitting Current Segment"
+
+if (! project.isProjectLoaded()) {
+    message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
+    final def msg = message
+    final def title = resBundle("name", name)
+    showMessageDialog null, msg, title, INFORMATION_MESSAGE
+    console.println(message)
+    return // message.alert()
+}
 
 org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
 
@@ -85,6 +99,15 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     String nextSeg = entry.key.next ? entry.key.next : ""
     String beforeBreak = split ? src.substring(0, position - srcStart) : entry.srcText
     String afterBreak = split ? src.substring(position - srcStart, src.size()): nextSeg
+    if (showTags) {
+        beforeBreak = beforeBreak.replaceAll(/\</, /\&lt\;/).replaceAll(/\>/, /\&gt\;/)
+        afterBreak = afterBreak.replaceAll(/\</, /\&lt\;/).replaceAll(/\>/, /\&gt\;/)
+        if (paintTags) {
+            beforeBreak = beforeBreak.replaceAll(/(\&lt\;\/?\s?\w+\s?\/?\d+?\s?\/?\s?\/?\&gt\;)/, /\<font size=$tagSize style=color:$tagColor\>$1\<\/font\>/)
+            afterBreak = afterBreak.replaceAll(/(\&lt\;\/?\s?\w+\s?\/?\d+?\s?\/?\s?\/?\&gt\;)/, /\<font size=$tagSize style=color:$tagColor\>$1\<\/font\>/)
+        }
+        console.println("$beforeBreak\n$afterBreak")
+    }
 
     initializeScript()
 
@@ -128,8 +151,8 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         separator = " "
     }
     String message = split ?
-    WordUtils.wrap("<html><i><b>$beforeBreak</b></i></html>\n\n<html><i><b>$afterBreak</b></i></html>\n\n", 150, "<br/>", false) + resBundle("proceed", proceed) :
-    WordUtils.wrap("<html><i><b>$beforeBreak$separator$afterBreak</b></i></html>\n\n", 150, "<br/>", false) + resBundle("proceed", proceed)
+    WordUtils.wrap("""<html><i><b>${beforeBreak}<br/><br/><br/>${afterBreak}</b></i></html>\n\n""", 250, "<br/>", true) + resBundle("proceed", proceed) :
+    WordUtils.wrap("""<html><i><b>${beforeBreak}${separator}${afterBreak}</b></i></html>\n\n""", 250, "<br/>", true) + resBundle("proceed", proceed)
     if (message.confirm() != 0) {
         console.clear()
         console.println(resBundle("noNewRule", noNewRule))
@@ -264,11 +287,6 @@ boolean isMerge() {
 }
 
 boolean isReadyForNewRule() {
-    if (! project.isProjectLoaded()) {
-        message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
-        //console.println(message)
-        return message.alert()
-    }
 
     def srx = project.projectProperties.projectSRX
     if (! srx && ! enforceProjectSRX) {

@@ -6,7 +6,7 @@
  * @version 1.1
  */
 import javax.swing.JOptionPane
-import org.apache.commons.lang.WordUtils
+import org.omegat.core.data.ProtectedPart
 import org.omegat.core.segmentation.datamodels.MappingRulesModel
 import org.omegat.core.segmentation.MapRule
 import org.omegat.core.segmentation.Rule
@@ -39,23 +39,24 @@ resBundle = { k,v ->
 }
 
 //// UI Strings
-name="Merge or split segments"
-description="Merge current segment with the next, or split it at the cursor location"
+name = "Merge or split segments"
+description = "Merge current segment with the next, or split it at the cursor location"
 
-srxEnabled="Project-specific segmentation rules have been enabled.\nRun the script again after the project is reloaded."
-noNewRule="No new rule added." 
-newSegmentationActive="New segmentation rule activated."
-splitMessage="Split result:" 
-mergeMessage="Merge result:" 
-proceed="Proceed?"
-noMappingRule="MappingRule for the source language is not found." 
-ruleExists="This rule already exists." 
-terminating=" Terminating now!"
-noReload="New rule added, but it will be activated only after the project is reloaded."
-noProjectOpen="No project open!" 
-noProjectSegmentation="The script works only with the project-specific segmentation rules!" 
-noMerge="Merging with the next segment is not possible!" 
-noSplit="Split point should not be at the beginning or the end of the source text!"
+srxEnabled = "Project-specific segmentation rules have been enabled.\nRun the script again after the project is reloaded."
+noNewRule = "No new rule added." 
+newSegmentationActive = "New segmentation rule activated."
+splitMessage = "Split result:" 
+mergeMessage = "Merge result:" 
+proceed = "Proceed?"
+noMappingRule = "MappingRule for the source language is not found."
+ruleExists = "This rule already exists." 
+terminating = " Terminating now!"
+noReload = "New rule added, but it will be activated only after the project is reloaded."
+noProjectOpen = "No project open!" 
+noProjectSegmentation = "The script works only with the project-specific segmentation rules!" 
+noMerge = "Merging with the next segment is not possible!" 
+noSplit = "Split point should not be at the beginning or the end of the source text!"
+inTag = "Split point cannot be inside a tag!" 
 mergeTitle="Merging Segments"
 splitTitle="Splitting Current Segment"
 
@@ -81,13 +82,7 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     srcRange = srcStart+1..srcEnd-1
     //if the caret is in the source text of the current segment, we split
     split = srcRange.contains(position) ? true : false
-    //if the caret is at the beginning or end of the source text, splitting won't make sense
-    boundry = position.equals(srcStart) || position.equals(srcEnd) ? true : false
-    if (boundry) {
-        message = resBundle("noSplit", noSplit) + resBundle("terminating", terminating)
-        message.alert()
-        return
-    }
+
     nextEntry = project.allEntries[entry.entryNum()] ? project.allEntries[entry.entryNum()] : null
     // merge is to see if the merge is possible at all (would not be before the paragraph start)
     if (!nextEntry) {
@@ -100,17 +95,14 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     String beforeBreak = split ? src.substring(0, position - srcStart) : entry.srcText
     String afterBreak = split ? src.substring(position - srcStart, src.size()): nextSeg
     if (showTags) {
-        beforeBreak = beforeBreak.replaceAll(/\</, /\&lt\;/).replaceAll(/\>/, /\&gt\;/)
-        afterBreak = afterBreak.replaceAll(/\</, /\&lt\;/).replaceAll(/\>/, /\&gt\;/)
+        beforeBreakMsg = beforeBreak.replaceAll(/\</, /\&lt\;/).replaceAll(/\>/, /\&gt\;/)
+        afterBreakMsg = afterBreak.replaceAll(/\</, /\&lt\;/).replaceAll(/\>/, /\&gt\;/)
         if (paintTags) {
-            beforeBreak = beforeBreak.replaceAll(/(\&lt\;\/?\s?\w+\s?\/?\d+?\s?\/?\s?\/?\&gt\;)/, /\<font size=$tagSize style=color:$tagColor\>$1\<\/font\>/)
-            afterBreak = afterBreak.replaceAll(/(\&lt\;\/?\s?\w+\s?\/?\d+?\s?\/?\s?\/?\&gt\;)/, /\<font size=$tagSize style=color:$tagColor\>$1\<\/font\>/)
+            beforeBreakMsg = beforeBreakMsg.replaceAll(/(\&lt\;\/?\s?\w+\s?\/?\d+?\s?\/?\s?\/?\&gt\;)/, /\<font size=$tagSize style=color:$tagColor\>$1\<\/font\>/)
+            afterBreakMsg = afterBreakMsg.replaceAll(/(\&lt\;\/?\s?\w+\s?\/?\d+?\s?\/?\s?\/?\&gt\;)/, /\<font size=$tagSize style=color:$tagColor\>$1\<\/font\>/)
         }
-        console.println("$beforeBreak\n$afterBreak")
     }
-
     initializeScript()
-
     // check if requirements are met
     if (! isReadyForNewRule()) {
         return
@@ -151,13 +143,14 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         separator = " "
     }
     String message = split ?
-    WordUtils.wrap("""<html><i><b>${beforeBreak}<br/><br/><br/>${afterBreak}</b></i></html>\n\n""", 250, "<br/>", true) + resBundle("proceed", proceed) :
-    WordUtils.wrap("""<html><i><b>${beforeBreak}${separator}${afterBreak}</b></i></html>\n\n""", 250, "<br/>", true) + resBundle("proceed", proceed)
+    """<html><i><b>${beforeBreakMsg}<br/><br/>${afterBreakMsg}</b></i></html>\n\n\n""" + resBundle("proceed", proceed) :
+    """<html><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i></html>\n\n\n""" + resBundle("proceed", proceed)
     if (message.confirm() != 0) {
         console.clear()
         console.println(resBundle("noNewRule", noNewRule))
         return
     }
+
 
     // create new rule
     boolean breakRule = split ? true : false // Exception
@@ -264,26 +257,53 @@ public static String escapeNonRegex(String text, boolean escapeWildcards) {
     return text
 }
 
-boolean isSplit() {
+def getActions() {
     entry = editor.currentEntry
     src = entry.srcText
+    tags = entry.getProtectedParts()
     position = editor.editor.getCaretPosition()
     srcEnd = editor.editor.getOmDocument().getTranslationStart() - 1
     srcStart = srcEnd - src.size()
     srcRange = srcStart+1..srcEnd-1
     //if the caret is in the source text of the current segment, we split
     split = srcRange.contains(position) ? true : false    
-    return split
-}
-
-boolean isMerge() {
+    //if next segment starts a new paragraph or there's no next segment, we refuse to merge
     def nextEntry = project.allEntries[entry.entryNum()] ? project.allEntries[entry.entryNum()] : null
     if (!nextEntry) {
         merge = false
     } else {
         merge = nextEntry.paragraphStart ? false : true
     }
-    return merge
+
+    //if the caret is at the beginning or end of the source text, splitting won't make sense
+    boundary = position.equals(srcStart) || position.equals(srcEnd) ? true : false
+    //if the caret is in the source text, we'll try to figure out if it's in the middle of a tag
+    intag = false
+    if (split && ! boundary) {
+        jumpBack = (position - srcStart) < 5 ? 0 : position - srcStart - 5
+        jumpForth = (position - srcStart + 5 > src.size()) ? src.size() : position - srcStart + 5
+        beginChunk = src.substring(jumpBack, position - srcStart).find(/(\<|\{).*$/)
+        endChunk = src.substring(position - srcStart, jumpForth).find(/^.*(\>|\})/)
+        beginChunk = beginChunk ? beginChunk : ""
+        endChunk = endChunk ? endChunk : ""
+        wholeChunk = beginChunk+endChunk
+        def textTags = []
+        if (tags.size()>0) {
+            for (i in 0..tags.size()-1) {
+                textTags.add(tags[i].getTextInSourceSegment())
+            }
+        }
+        if (textTags.contains(beginChunk) || textTags.contains(endChunk)) {
+            intag = false
+            console.println("intag is $intag")
+        } else {
+            if (textTags.contains(wholeChunk)) {
+                intag = true
+            }
+        }
+        //return intag
+    }
+    return [split, merge, boundary, intag]
 }
 
 boolean isReadyForNewRule() {
@@ -294,12 +314,27 @@ boolean isReadyForNewRule() {
         return message.alert()
     }
 
-    split = isSplit()
-    merge = isMerge()
+    result = getActions()
+    split = result[0]
+    merge = result[1]
+    boundary = result[2]
+    intag = result[3]
     
+    if (boundary) {
+        message = resBundle("noSplit", noSplit) + resBundle("terminating", terminating)
+        console.println message
+        return message.alert()
+    }
+
     if (! split && ! merge) {
         message = resBundle("noMerge", noMerge) + resBundle("terminating", terminating)
         return message.alert()
+    }
+
+    if (intag) {
+        message = resBundle("inTag", inTag) + resBundle("terminating", terminating)
+        return message.alert()
+        
     }
 
     // OK
@@ -307,8 +342,9 @@ boolean isReadyForNewRule() {
 }
 
 void initializeScript() {
-    split = isSplit()
-    merge = isMerge()
+    result = getActions()
+    split = result[0]
+    merge = result[1]
 
     // String class
     String.metaClass.toXML = { ->

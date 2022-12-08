@@ -2,10 +2,16 @@
  *         Merge current segment with the next or split it at the cursor (if in source text)
  * 
  * @author  Yu Tang, Kos Ivantsov
- * @date    2022-12-05
- * @version 1.1
+ * @date    2022-12-08
+ * @version 1.3
  */
+
+import java.awt.BorderLayout
+import java.awt.Dimension
+import javax.swing.JLabel
 import javax.swing.JOptionPane
+import javax.swing.JPanel
+
 import org.omegat.core.data.ProtectedPart
 import org.omegat.core.segmentation.datamodels.MappingRulesModel
 import org.omegat.core.segmentation.MapRule
@@ -23,7 +29,7 @@ import static org.omegat.util.StringUtil.*
 
 enforceProjectSRX   = true   //if true, the script will make sure project-specific segmentation is enabled
 separateMappingRule = true   //if true, the script will add a separate group for its rules
-showTags            = true   //if false, in the confirmation message tags won't be shown
+showTags            = true   //if false, tags won't be shown in the confirmation message
 paintTags           = true   //if true, tags will be shown in different font size and color
 tagColor            = "gray" //tag color
 tagSize             = 1      //tag size
@@ -47,7 +53,7 @@ noNewRule = "No new rule added."
 newSegmentationActive = "New segmentation rule activated."
 splitMessage = "Split result:" 
 mergeMessage = "Merge result:" 
-proceed = "Proceed?"
+proceed = "Add this rule?"
 noMappingRule = "MappingRule for the source language is not found."
 ruleExists = "This rule already exists." 
 terminating = " Terminating now!"
@@ -66,7 +72,7 @@ if (! project.isProjectLoaded()) {
     final def title = resBundle("name", name)
     showMessageDialog null, msg, title, INFORMATION_MESSAGE
     console.println(message)
-    return // message.alert()
+    return
 }
 
 org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
@@ -143,8 +149,10 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         separator = " "
     }
     String message = split ?
-    """<html><i><b>${beforeBreakMsg}<br/><br/>${afterBreakMsg}</b></i></html>\n\n\n""" + resBundle("proceed", proceed) :
-    """<html><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i></html>\n\n\n""" + resBundle("proceed", proceed)
+    //"""<html><hr/><i><b>${beforeBreakMsg}</b></i><br/><hr/><i><b>${afterBreakMsg}</b></i><hr/><br/><br/><br/>""" + resBundle("proceed", proceed) + "</html>" :
+    //"""<html><hr/><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i><hr/><br/><br/><br/>""" + resBundle("proceed", proceed) + "</html>"
+    """<html>${resBundle("proceed", proceed)}<br/><br/><hr/><i><b>${beforeBreakMsg}</b></i><br/><hr/><i><b>${afterBreakMsg}</b></i><hr/></html>""" :
+    """<html>${resBundle("proceed", proceed)}<br/><br/><hr/><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i><hr/><br/><br/><br/>"""
     if (message.confirm() != 0) {
         console.clear()
         console.println(resBundle("noNewRule", noNewRule))
@@ -295,13 +303,11 @@ def getActions() {
         }
         if (textTags.contains(beginChunk) || textTags.contains(endChunk)) {
             intag = false
-            console.println("intag is $intag")
         } else {
             if (textTags.contains(wholeChunk)) {
                 intag = true
             }
         }
-        //return intag
     }
     return [split, merge, boundary, intag]
 }
@@ -358,7 +364,15 @@ void initializeScript() {
         false
     }
     String.metaClass.confirm = { ->
-        showConfirmDialog null, delegate, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION
+        pane = new JOptionPane()
+        panel = new JPanel(new BorderLayout())
+        text = delegate
+        bestSize = new Dimension((text.size() < 370 ? 350 : text.size().intdiv(2) + 100 ), (text.size() < 370 ? 250 : text.size().intdiv(3) + 100))
+        panel.setPreferredSize(bestSize)
+	   label = new JLabel(text)
+	   panel.add(label, "North")
+        pane.showConfirmDialog(null, panel, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
+        //showConfirmDialog( null, delegate, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
     }
 
     // SRX class

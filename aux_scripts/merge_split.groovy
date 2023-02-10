@@ -2,8 +2,8 @@
  *         Merge current segment with the next or split it at the cursor (if in source text)
  * 
  * @author  Yu Tang, Kos Ivantsov
- * @date    2022-12-08
- * @version 1.3
+ * @date    2023-02-10
+ * @version 1.4
  */
 
 import java.awt.BorderLayout
@@ -89,15 +89,18 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     //if the caret is in the source text of the current segment, we split
     split = srcRange.contains(position) ? true : false
 
-    nextEntry = project.allEntries[entry.entryNum()] ? project.allEntries[entry.entryNum()] : null
-    // merge is to see if the merge is possible at all (would not be before the paragraph start)
+    currentFile = project.projectFiles.subList(editor.@displayedFileIndex, editor.@displayedFileIndex + 1)[0]
+    entryRelativeNum = (entry.entryNum() - currentFile.entries[0].entryNum() + 1)
+    segmentsInFile = currentFile.entries.size()
+    nextEntry = (entryRelativeNum != segmentsInFile) ? project.allEntries[entry.entryNum()] : null
+    // merge is to see if the merge is possible at all (would not be on the last entry of a file or before a new paragraph)
     if (!nextEntry) {
         merge = false
     } else {
         merge = nextEntry.paragraphStart ? false : true
     }
     //get fragments to split or merge
-    String nextSeg = entry.key.next ? entry.key.next : ""
+    String nextSeg = nextEntry ? nextEntry.srcText : ""
     String beforeBreak = split ? src.substring(0, position - srcStart) : entry.srcText
     String afterBreak = split ? src.substring(position - srcStart, src.size()): nextSeg
     if (showTags) {

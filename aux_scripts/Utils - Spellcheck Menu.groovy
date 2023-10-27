@@ -2,7 +2,7 @@
  *  
  * @author  Kos Ivantsov
  * @date    2023-10-27
- * @version 0.2
+ * @version 0.3
  */
 
 import java.awt.Robot
@@ -80,60 +80,61 @@ def gui() {
     //Get the position of the translation start, to be used to move the cursor
     int end = editor.editor.getOmDocument().getTranslationStart()
 
-    //This variable (ignore) is going to be used later to print status message if no misspelled words are found
-    ignore = true
+    //Get the position of the caret in the target. If it's before the target, start checking from the end
+    pos = editor.getCurrentPositionInEntryTranslation() ? editor.getCurrentPositionInEntryTranslation() : target.size()
 
     //Get every word in the current translation
-    //If it's misspelled, get its offset, mover cursor/caret to the beginning of the word 
-    for (Token tok in Core.getProject().getTargetTokenizer().tokenizeWords(target, StemmingMode.NONE)) {
+    targetTokens = Core.getProject().getTargetTokenizer().tokenizeWords(target, StemmingMode.NONE)
+    misspelledWords = []
+    for (Token tok in targetTokens) {
         String word = tok.getTextFromString(target)
         if (!Core.getSpellChecker().isCorrect(word)) {
             int start = tok.offset
-            editor.editor.setCaretPosition(end + start)
-
-            //Release all modifiers so that the robotized key combo is not blocked
-            keyMap.each() {
-            	try {
-            	    robot.keyRelease(it.value) 
-            	}
-            	catch (java.lang.IllegalArgumentException iae) {
-		    //If the modifier is not available, report it in the console
-            	    console.println(it.key + resBundle("keyNotAvalable", keyNotAvalable))
-            	}
-            }
-
-            //Give it a bit of time, just in case
-            sleep 50
-            //Check if any modifiers are used, and if so, store their codes from the map above in an array
-            //Then press each modifer
-            keyEventModifiers = []
-            if (menuModifiers.size() > 0) {
-                menuModifiers.each() {
-                    if (keyMap.containsKey(it)) {
-                        keyEventModifiers.add(keyMap[it])
-                        robot.keyPress(keyMap[it])
-                    }
-                }
-            }
-
-            //Now press and release the actual key
-            robot.keyPress(menuCode)
-            robot.keyRelease(menuCode)
-            //And now release each modifier in the reversed order
-            if (keyEventModifiers.size() > 0) {
-                keyEventModifiers.reverse().each() {
-                    robot.keyRelease(it)
-                }
-            }
-            //Break here, so the menu pops up on the first misspelled word only
-            //Set ignore to false so no message in the status bar is shown
-            ignore = false
-            return
+            misspelledWords.add(start)
         }
     }
 
-    //If ignore is true, show a message in the status bar about no misspelled words 
-    if (ignore) {
+    //If there are misspelled words, get the offset of the last one, mover cursor/caret to the beginning of the word
+    if (misspelledWords.size() > 0) {
+        jumpPosition = (misspelledWords.size() == 1) ? misspelledWords[0] : misspelledWords.findAll { it <= pos }.last()
+        editor.editor.setCaretPosition(end + jumpPosition)
+
+        //Release all modifiers so that the robotized key combo is not blocked
+        keyMap.each() {
+            try {
+                robot.keyRelease(it.value) 
+            }
+            catch (java.lang.IllegalArgumentException iae) {
+                //If the modifier is not available, report it in the console
+                console.println(it.key + resBundle("keyNotAvalable", keyNotAvalable))
+            }
+        }
+
+        //Give it a bit of time, just in case
+        sleep 50
+
+        //Check if any modifiers are used in the shortcut, and if so, store their codes from the map above in an array
+        //Then press each modifer
+        keyEventModifiers = []
+        if (menuModifiers.size() > 0) {
+            menuModifiers.each() {
+                if (keyMap.containsKey(it)) {
+                    keyEventModifiers.add(keyMap[it])
+                    robot.keyPress(keyMap[it])
+                }
+            }
+        }
+
+        //Now press and release the actual key
+        robot.keyPress(menuCode)
+        robot.keyRelease(menuCode)
+        //And now release each modifier in the reversed order
+        if (keyEventModifiers.size() > 0) {
+            keyEventModifiers.reverse().each() {
+                robot.keyRelease(it)
+            }
+        }
+    } else {
         console.println(resBundle("noMisspelled", noMisspelled))
         statusMessage(resBundle("noMisspelled", noMisspelled))
     }

@@ -2,7 +2,7 @@
  *  
  * @author  Kos Ivantsov
  * @date    2023-10-27
- * @version 0.1
+ * @version 0.2
  */
 
 import java.awt.Robot
@@ -12,9 +12,13 @@ import org.omegat.gui.shortcuts.PropertiesShortcuts
 import org.omegat.tokenizer.ITokenizer.StemmingMode
 import org.omegat.util.Token
 
+//UI strings
 name          = "Spellcheck Menu" 
 noTranslation = "Segment not translated"
 noMisspelled  = "No misspelled words in this segment"
+keyNotAvalable = " is not available"
+
+//Report in the console which script is running
 console.clear()
 console.println(resBundle("name", name) + "\n${"=" * name.size()}")
 
@@ -66,7 +70,8 @@ def gui() {
         "CTRL": KeyEvent.VK_CONTROL,
         "CONTROL": KeyEvent.VK_CONTROL,
         "ALT": KeyEvent.VK_ALT,
-        "META": KeyEvent.VK_META
+        "META": KeyEvent.VK_META,
+        "WINDOWS": KeyEvent.VK_WINDOWS
     ]
 
     //Init a robot to perform key events
@@ -85,11 +90,18 @@ def gui() {
         if (!Core.getSpellChecker().isCorrect(word)) {
             int start = tok.offset
             editor.editor.setCaretPosition(end + start)
+
             //Release all modifiers so that the robotized key combo is not blocked
-            robot.keyRelease(KeyEvent.VK_SHIFT)
-            robot.keyRelease(KeyEvent.VK_CONTROL)
-            robot.keyRelease(KeyEvent.VK_ALT)
-            robot.keyRelease(KeyEvent.VK_META)
+            keyMap.each() {
+            	try {
+            	    robot.keyRelease(it.value) 
+            	}
+            	catch (java.lang.IllegalArgumentException iae) {
+		    //If the modifier is not available, report it in the console
+            	    console.println(it.key + resBundle("keyNotAvalable", keyNotAvalable))
+            	}
+            }
+
             //Give it a bit of time, just in case
             sleep 50
             //Check if any modifiers are used, and if so, store their codes from the map above in an array
@@ -103,6 +115,7 @@ def gui() {
                     }
                 }
             }
+
             //Now press and release the actual key
             robot.keyPress(menuCode)
             robot.keyRelease(menuCode)
@@ -113,7 +126,7 @@ def gui() {
                 }
             }
             //Break here, so the menu pops up on the first misspelled word only
-            //Set ignore to false 
+            //Set ignore to false so no message in the status bar is shown
             ignore = false
             return
         }

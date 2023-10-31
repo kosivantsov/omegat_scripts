@@ -2,7 +2,7 @@
  * 
  * @author   Kos Ivantsov
  * @date     2023-10-31
- * @version  0.2
+ * @version  0.3
  */
 
 import org.omegat.core.data.PrepareTMXEntry
@@ -55,8 +55,8 @@ tagPattern = /(\<\/?\w+\d+\/?\>)/
    
    Since the jump to an untranslated segment could cause automatic insertion of the source text or the best match,
    it's important to make sure those options are disabled*/
-boolean automaticallyInsertBestMatch = Preferences.getPreference("wf_insertBestMatch")
-boolean automaticallyInsertSource = Preferences.getPreference("wf_noSourceText")
+automaticallyInsertBestMatch = Preferences.getPreference("wf_insertBestMatch")
+automaticallyInsertSource = Preferences.getPreference("wf_noSourceText")
 Preferences.setPreference("wf_insertBestMatch", false)
 Preferences.setPreference("wf_noSourceText", true)
 

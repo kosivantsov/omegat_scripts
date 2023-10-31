@@ -1,8 +1,8 @@
 /* :name =  Remove extraneous tags :description = Finds and removes all extra tags not present in the source
  * 
  * @author   Kos Ivantsov
- * @date     2023-10-30
- * @version  0.1
+ * @date     2023-10-31
+ * @version  0.2
  */
 
 import org.omegat.core.data.PrepareTMXEntry
@@ -11,6 +11,9 @@ import org.omegat.core.data.TMXEntry
 import org.omegat.gui.main.ProjectUICommands
 import org.omegat.util.OConsts
 import org.omegat.util.Preferences
+
+import static javax.swing.JOptionPane.*
+import static org.omegat.util.Platform.*
 
 /* UI strings */
 name          = "Remove extraneous tags" 
@@ -35,7 +38,7 @@ def resBundle(k,v) {
 /* Check if the project is open */
 prop = project.projectProperties
 if (!prop) {
-    message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
+    message = resBundle("noProjectOpen", noProjectOpen)
     final def msg = message
     final def title = resBundle("name", name)
     showMessageDialog null, msg, title, INFORMATION_MESSAGE

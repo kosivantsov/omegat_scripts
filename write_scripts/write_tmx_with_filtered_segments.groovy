@@ -2,7 +2,7 @@
  *  
  * @author  Kos Ivantsov
  * @date    2032-11-03
- * @version 0.1
+ * @version 0.2
  */
 
 /* Set the script variables to filter segments for export.
@@ -27,16 +27,32 @@ import org.omegat.util.TMXReader2
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
 
+/* CLI or GUI probing */
+def echo
+def cli
+try {
+    mainWindow.statusLabel.getText()
+    echo = {
+        k -> console.println(k.toString())
+    }
+    cli = false
+} catch(Exception e) {
+    echo = { k -> 
+        println("\n~~~ Script output ~~~\n\n" + k.toString() + "\n\n^^^^^^^^^^^^^^^^^^^^^\n")
+    }
+    cli = true
+}
+
 /* Report the script name in the console */
 name = "Write Filtered Segments to TMX"
-console.println("$name\n${"=" * (name.size())}")
+echo("$name\n${"=" * (name.size())}")
 
 /* Check if the project is open */
 prop = project.projectProperties
 if (!prop) {
     def title = 'Export TMX'
     def msg   = 'Please try again after you open a project.'
-    console.println(msg)
+    echo(msg)
     showMessageDialog null, msg, title, INFORMATION_MESSAGE
     return
 }
@@ -44,7 +60,7 @@ if (!prop) {
 /* Try to get variables from the external file */
 varsFile = new File(prop.getProjectRoot() + ".ini" + File.separator + "tmxexport.ini")
 if (varsFile.exists()) {
-    console.println("Using filtering settings defined in ${varsFile}:")
+    echo("Using filtering settings defined in ${varsFile}:")
     externalVars = new ConfigSlurper().parse(varsFile.toURL())
     filter = externalVars.filter ?: filter
     secondFilter = externalVars.secondFilter ?: secondFilter
@@ -54,7 +70,7 @@ if (varsFile.exists()) {
     changeDate = externalVars.changeDate ?: changeDate
     includeXAuto = externalVars.includeXAuto ?: includeXAuto
 } else {
-    console.println("Using filtering settings defined in this script:")
+    echo("Using filtering settings defined in this script:")
 }
 
 /* Get the default values for the filtering if not set */
@@ -146,7 +162,7 @@ switch (secondFilter) {
         secondFilter = "none"
 }
 /* Report the selected settings */
-console.println("${varMessage}\n${"-" * (name.size())}")
+echo("${varMessage}\n${"-" * (name.size())}")
 
 /* Collect project-specific data */
 sourceLocale = prop.getSourceLanguage().toString()
@@ -279,9 +295,9 @@ if (uniqueEntries.size() > 0) {
     /* Write collected entries to the TMX file */
     exportFile = new File(exportFolder.toString() + File.separator + sourceLocale + "_" + targetLocale + fileNamePart + ".tmx")
     exportFile.write(tmxContents.toString(), "UTF-8")
-    console.println("Found entries: $filteredCount\nRepeated with default translation: $skipCount\n" +
+    echo("Found entries: $filteredCount\nRepeated with default translation: $skipCount\n" +
                     "${uniqueEntries.size()} entries written to ${exportFile.toString()}\n${"=" * (name.size())}\nDone")
 } else {
-    console.println("No entries found for the export\n${"=" * (name.size())}\nDone")
+    echo("No entries found for the export\n${"=" * (name.size())}\nDone")
 }
 return

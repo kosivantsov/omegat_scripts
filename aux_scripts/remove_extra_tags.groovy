@@ -1,8 +1,8 @@
 /* :name =  Remove extraneous tags :description = Finds and removes all extra tags not present in the source
  * 
  * @author   Kos Ivantsov
- * @date     2023-10-31
- * @version  0.3
+ * @date     2023-11-05
+ * @version  0.2
  */
 
 import org.omegat.core.data.PrepareTMXEntry
@@ -11,9 +11,6 @@ import org.omegat.core.data.TMXEntry
 import org.omegat.gui.main.ProjectUICommands
 import org.omegat.util.OConsts
 import org.omegat.util.Preferences
-
-import static javax.swing.JOptionPane.*
-import static org.omegat.util.Platform.*
 
 /* UI strings */
 name          = "Remove extraneous tags" 
@@ -81,6 +78,7 @@ newAuthor = "${originalAuthor} ${scriptMarker}".replaceAll(/(${scriptMarker}\s*)
 Preferences.setPreference(Preferences.TEAM_AUTHOR, newAuthor)
 
 /* Traverse the project and fix the translation */
+count = 0
 project.allEntries.each() { ste ->
     info = project.getTranslationInfo(ste)
     /* Creation/change ID/date can be read, but they are not needed */
@@ -132,6 +130,7 @@ project.allEntries.each() { ste ->
         } else {
             project.setTranslation(ste, te, false, TMXEntry.ExternalLinked.xAUTO)
         }
+        count++
     }
 }
 /* Set changed preferences back to what they were before the script was run */
@@ -147,5 +146,7 @@ if (noTagsTarget !== curEntry) {
     } as Runnable 
 }
 sleep 500
-org.omegat.gui.main.ProjectUICommands.projectReload()
+if (count > 0) {
+    org.omegat.gui.main.ProjectUICommands.projectReload()
+}
 return

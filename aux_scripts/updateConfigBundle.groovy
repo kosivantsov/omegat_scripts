@@ -1,11 +1,11 @@
-/* :name = Update Customisation Bundle :description =
+/* :name = Update Customisation Bundle (v572) :description =
  *  Update OmegaT customisation from a remote repository
  *
  * @author:  Kos Ivantsov
  * @date:    2020-09-27
  * @review:  Lev Abashkin
  * @review:  Manuel Souto Pico
- * @version: 0.5.3
+ * @version: 0.5.4
  *
  */
 
@@ -22,6 +22,7 @@
  *          0.5.1: more bug fixes by Lev
  *          0.5.2: Fix local plugin directory creation
  *          0.5.3: Delete folder accidentally created with version 0.5.1 when trying to write jar file
+ *          0.5.4: Update autotext merging logic
  *
  */
 
@@ -579,12 +580,35 @@ if (update != 0) {
         }
         if (bundleAutoText.exists()) {
             if (localAutoText.exists()) {
+                def lines = []
                 bundleAutoText = new File(tmpConfigDir.toString() + File.separator + "omegat.autotext")
                 localAutoText = new File(confDir + File.separator + "omegat.autotext")
-                newAutoText = (bundleAutoText.text + localAutoText.text).tokenize("\n").unique().join("\n")
+                newAutoText = new File(tmpConfigDir.toString() + File.separator + "omegat.autotext.new")
+                bundleAutoText.eachLine { line ->
+                    def fields = line.split('\t')
+                    if (fields.size() >= 2) {
+                        lines << fields.join('\t')
+                    }
+                }
+                localAutoText.eachLine { line ->
+                    def fields = line.split('\t')
+                    if (fields.size() >= 2) {
+                        def key = fields[0] + '\t' + fields[1]
+                        if (!lines.any { it.startsWith(key) }) {
+                            lines << fields.join('\t')
+                        }
+                    }
+                }
+                lines = lines.sort().unique()
+                newAutoText.withWriter("UTF-8") { writer ->
+                    lines.each {
+                        writer.writeLine(it)
+                    }
+                }
                 FileUtils.copyFileToDirectory(localAutoText, bakDir)
-                localAutoText.write(newAutoText, "UTF-8")
+                newAutoText.renameTo(localAutoText)
                 bundleAutoText.delete()
+                newAutoText.delete()
                 success++
             } else {
                 FileUtils.moveFile(bundleAutoText, localAutoText)

@@ -17,12 +17,12 @@
  *              to all other sheets to simplify navigation.
  *              It requires the JExcel library (http://jexcelapi.sourceforge.net/),
  *              which the script fetches from the Internet
- *              
+ * 
  * 
  * @author:     Kos Ivantsov, Briac Pilpre
  * @date:       2019-06-21
- * @latest:     2022-09-08
- * @version:    1.3
+ * @latest:     2023-12-13
+ * @version:    1.4
  */
 import static javax.swing.JOptionPane.*
 import static org.omegat.util.Platform.*
@@ -34,23 +34,26 @@ import org.omegat.util.StaticUtils
 import org.omegat.util.StringUtil
 
 //Script options
-autoopen         = "none"   //Automatically open the table file upon creation ("folder"|"spreadsheet"|"none")
-includeSegmentId = true     //Add a column for segment ID
-includeCreatedId = true     //Add a column for the original author
-includeChangedId = true     //Add a column for the author of changes
-includeNotes     = true     //Add a column for segment notes added by translator(s)
-includeComments  = true     //Add a column for segment comments coming from the source file (if the filter supports it)
-includeExtraCol  = true     //Add a column with info about uniqness and alternative translation
-fillEmptTran     = true     //Add custom string to empty translations, i.e. where translation is INTENTIONALLY set to empty (true|false)
-markNonUniq      = true     //Add color background to non-unique segments
-markAlt          = true     //Add color borders to segments with alternative translation
-markPara         = true     //First segments in paragraphs will have a different color for the top border
-uniqStr          = ""       //Extra cell text for uniq segments
-firstStr         = "1"      //Extra cell text for the 1st occurance of a repeated segment
-repStr           = "+"      //Extra cell text for further occurances of a repeated segment
-altStr           = "a"      //Extra cell text for alternative translation of the segmnent
-defStr           = ""       //Extra cell text for default translation of the segmnent
-notTranslated    = "NT"     //Extra cell text for segments with no translation (NOT empty, but untranslated)
+autoopen           = "none"   //Automatically open the table file upon creation ("folder"|"spreadsheet"|"none")
+includeSegmentId   = true     //Add a column for segment ID
+includeCreatedId   = true     //Add a column for the original author
+includeChangedId   = true     //Add a column for the author of changes
+includeCreatedDate = true     //Add a column for the original translation date
+includeChangedDate = true     //Add a column for the latest change date
+includeNotes       = true     //Add a column for segment notes added by translator(s)
+includeComments    = true     //Add a column for segment comments coming from the source file (if the filter supports it)
+includeExtraCol    = true     //Add a column with info about uniqness and alternative translation
+fillEmptTran       = true     //Add custom string to empty translations, i.e. where translation is INTENTIONALLY set to empty (true|false)
+markNonUniq        = true     //Add color background to non-unique segments
+markAlt            = true     //Add color borders to segments with alternative translation
+markPara           = true     //First segments in paragraphs will have a different color for the top border
+formatForDate      = "yyyy-MM-dd HH:mm"  //The format in which the date should be presented
+uniqStr            = ""       //Extra cell text for uniq segments
+firstStr           = "1"      //Extra cell text for the 1st occurance of a repeated segment
+repStr             = "+"      //Extra cell text for further occurances of a repeated segment
+altStr             = "a"      //Extra cell text for alternative translation of the segmnent
+defStr             = ""       //Extra cell text for default translation of the segmnent
+notTranslated      = "NT"     //Extra cell text for segments with no translation (NOT empty, but untranslated)
 
 // Color Settings
 /*
@@ -95,7 +98,9 @@ emptyTrans="<EMPTY>"
 extraColStr = "Alt/Uniq"
 segmentID="Segment ID"
 createdID="Created"
+createdDate="Created on"
 changedID="Changed"
+changedDate="Changed on"
 n_a = "N/A"
 note = "Note"
 comment = "Comment"
@@ -111,7 +116,7 @@ try {
     }
     cli = false
 } catch(Exception e) {
-    echo = { k -> 
+    echo = { k ->
         println("\n~~~ Script output ~~~\n\n" + k.toString() + "\n\n^^^^^^^^^^^^^^^^^^^^^\n")
     }
     cli = true
@@ -187,7 +192,7 @@ boldFormat.setShrinkToFit(true)
 boldFormat.setBackground(Colour."$colHeaderBgColor")
 
 //Smaller bold text
-boldsFormat = WritableCellFormat.newInstance() 
+boldsFormat = WritableCellFormat.newInstance()
 boldsFormat.setFont(WritableFont.newInstance(WritableFont.ARIAL, 9, WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE, Colour."$colHeaderFontColor"))
 boldsFormat.setAlignment(Alignment.LEFT)
 boldsFormat.setVerticalAlignment(VerticalAlignment.CENTRE)
@@ -241,7 +246,11 @@ if (includeSegmentId)
     filenameLastCell++
 if (includeCreatedId)
     filenameLastCell++
+if (includeCreatedDate)
+    filenameLastCell++
 if (includeChangedId)
+    filenameLastCell++
+if (includeChangedDate)
     filenameLastCell++
 if (includeNotes)
     filenameLastCell++
@@ -255,7 +264,7 @@ for (i in 0 ..< files.size())
     fi = files[i]
     curfilename = fi.filePath.toString()
     sheetname = (sheetcount+1).toString()
-    
+
     //Get the longest string in source and target to set their column widths
     //    (so it's not too long for the files with only short segments)
     def sourceLength = []
@@ -280,7 +289,7 @@ for (i in 0 ..< files.size())
     def targetWidth = returnLongest(targetLength)
 
     sheet = w.createSheet(sheetname, sheetcount + 1)
-   
+
     wh = WritableHyperlink.newInstance(0, sheetcount + 2, 2, 0, "", sheet, 1, 0, 0, 0)
     mastersheet.addHyperlink(wh)
     mastersheet.setColumnView(0, 100)
@@ -306,15 +315,23 @@ for (i in 0 ..< files.size())
         headerNum++
         sheet.setColumnView(headerNum, resBundle("extraColStr", extraColStr).size() + 5)
     }
-    if (includeSegmentId) {    
+    if (includeSegmentId) {
         headerNum++
         sheet.setColumnView(headerNum, 20)
     }
-    if (includeCreatedId) {    
+    if (includeCreatedId) {
         headerNum++
         sheet.setColumnView(headerNum, 20)
     }
-    if (includeChangedId) {    
+    if (includeCreatedDate) {
+        headerNum++
+        sheet.setColumnView(headerNum, 20)
+    }
+    if (includeChangedId) {
+        headerNum++
+        sheet.setColumnView(headerNum, 20)
+    }
+    if (includeChangedDate) {
         headerNum++
         sheet.setColumnView(headerNum, 20)
     }
@@ -352,8 +369,16 @@ for (i in 0 ..< files.size())
         sheet.addCell(Label.newInstance(columnNum, 1, resBundle("createdID", createdID), boldFormat))
         columnNum++
     }
+    if (includeCreatedDate) {
+        sheet.addCell(Label.newInstance(columnNum, 1, resBundle("createdDate", createdDate), boldFormat))
+        columnNum++
+    }
     if (includeChangedId) {
         sheet.addCell(Label.newInstance(columnNum, 1, resBundle("changedID", changedID), boldFormat))
+        columnNum++
+    }
+    if (includeChangedDate) {
+        sheet.addCell(Label.newInstance(columnNum, 1, resBundle("changedDate", changedDate), boldFormat))
         columnNum++
     }
     if (includeNotes) {
@@ -365,6 +390,8 @@ for (i in 0 ..< files.size())
         columnNum++
     }
     sheetcount++
+
+    def dateFormat = new java.text.SimpleDateFormat(formatForDate)
     count = 1
     for (j in 0 ..< fi.entries.size())
     {
@@ -374,14 +401,18 @@ for (i in 0 ..< files.size())
         ste = fi.entries[j]
         info = project.getTranslationInfo(ste)
         def changeId = info.changer
-        def changeDate = info.changeDate
+        def chDate = info.changeDate
+        def changeDate = dateFormat.format(new Date(chDate))
         def creationId = info.creator
-        def creationDate = info.creationDate
+        def crDate = info.creationDate
+        def creationDate = dateFormat.format(new Date(crDate))
         def isDup = ste.getDuplicate()
         def isAlt = info.defaultTranslation ? defStr : altStr
         def newPar = ste.paragraphStart ? ste.paragraphStart.toString() : null
         if (newPar) {
-            finalTextFormat.setBorder(Border.TOP, BorderLineStyle.THIN)
+            if (markPara) {
+                finalTextFormat.setBorder(Border.TOP, BorderLineStyle.THIN)
+            }
         }
         def seg_num = ste.entryNum().toString()
         def segmentId = ste.key.id ? ste.key.id : resBundle("n_a", n_a)
@@ -427,8 +458,16 @@ for (i in 0 ..< files.size())
             sheet.addCell(Label.newInstance(columnNum, count + 1, creationId, metaFormat))
             columnNum++
         }
+        if (includeCreatedDate) {
+            sheet.addCell(Label.newInstance(columnNum, count + 1, creationDate, metaFormat))
+            columnNum++
+        }
         if (includeChangedId) {
             sheet.addCell(Label.newInstance(columnNum, count + 1, changeId, metaFormat))
+            columnNum++
+        }
+        if (includeChangedDate) {
+            sheet.addCell(Label.newInstance(columnNum, count + 1, changeDate, metaFormat))
             columnNum++
         }
         if (includeNotes) {

@@ -4,7 +4,7 @@
 
 To enable Jython as one of the script engines in OmegaT, it's necessary to add jython to the classpath. To do so, run OmegaT with this command:
 
-```-cp "/path/to/OmegaT/installation/folder/OmegaT.jar:/path/to/OmegaT/installation/folder/lib/*:/path/to/jython.jar" org.omegat.Main```
+```java -cp "/path/to/OmegaT/installation/folder/OmegaT.jar:/path/to/OmegaT/installation/folder/lib/*:/path/to/jython.jar" org.omegat.Main```
 
 Alternatively, OmegaT can be built with Jython support. To do so, edit the file `build.gradle` in OmegaT source folder. Add this line:
 

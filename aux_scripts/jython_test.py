@@ -1,4 +1,4 @@
-# :name = ===Jython Test :description =
+# :name = Jython Test :description =
 
 from org.omegat.util import OStrings
 from javax.swing import JOptionPane

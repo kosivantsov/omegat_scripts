@@ -1,5 +1,7 @@
 #!/bin/bash
-
+#####################################################################
+# Run OmegaT in Xvfb. Useful to load OmegaT team project in batches #
+#####################################################################
 # Variables
 JAR=/opt/omegat/OmegaT_5.7.1_Beta_Without_JRE/OmegaT.jar
 JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64

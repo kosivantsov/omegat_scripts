@@ -2,8 +2,8 @@
  *         Merge current segment with the next or split it at the cursor (if in source text)
  * 
  * @author  Yu Tang, Kos Ivantsov
- * @date    2023-02-10
- * @version 1.4
+ * @date    2024-09-10
+ * @version 1.5
  */
 
 import java.awt.BorderLayout
@@ -120,8 +120,13 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     if (! project.projectProperties.projectSRX && enforceProjectSRX) {
         srx = Preferences.getSRX()
         projectSRX = srx.copy()
-        projectSRXFile = new File(project.projectProperties.getProjectInternal() + "segmentation.conf")
-        projectSRX.saveTo(projectSRX, projectSRXFile)
+        if  (OStrings.VERSION < '6.1.0') {
+            projectSRXFile = new File(project.projectProperties.getProjectInternal() + "segmentation.conf")
+            projectSRX.saveTo(projectSRX, projectSRXFile)
+        } else {
+            projectSRXFile = new File(project.projectProperties.getProjectInternal())
+            projectSRX.saveToSrx(projectSRX, projectSRXFile)
+        }
         project.projectProperties.setProjectSRX(projectSRX)
         message = resBundle("srxEnabled", srxEnabled)
         message.alert()
@@ -151,11 +156,13 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     if (! srcLang.isCJK()) {
         separator = " "
     }
+
     String message = split ?
     //"""<html><hr/><i><b>${beforeBreakMsg}</b></i><br/><hr/><i><b>${afterBreakMsg}</b></i><hr/><br/><br/><br/>""" + resBundle("proceed", proceed) + "</html>" :
     //"""<html><hr/><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i><hr/><br/><br/><br/>""" + resBundle("proceed", proceed) + "</html>"
     """<html>${resBundle("proceed", proceed)}<br/><br/><hr/><i><b>${beforeBreakMsg}</b></i><br/><hr/><i><b>${afterBreakMsg}</b></i><hr/></html>""" :
     """<html>${resBundle("proceed", proceed)}<br/><br/><hr/><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i><hr/><br/><br/><br/>"""
+    
     if (message.confirm() != 0) {
         console.clear()
         console.println(resBundle("noNewRule", noNewRule))
@@ -194,8 +201,7 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     // register new rule to the segmentation
     mapRule.rules[0..<0] = rule // Appends a new rule to the head of List.
 
-    // reload the project
-    if (showConfirmDialog(mainWindow, OStrings.getString("MW_REOPEN_QUESTION"),
+    if (showConfirmDialog(null, OStrings.getString("MW_REOPEN_QUESTION"),
         OStrings.getString("MW_REOPEN_TITLE"), JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
         org.omegat.gui.main.ProjectUICommands.projectReload()
     } else {

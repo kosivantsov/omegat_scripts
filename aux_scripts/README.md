@@ -2,6 +2,7 @@
 
 ## Enabling Jython in OmegaT
 
+<details>
 To enable Jython as one of the script engines in OmegaT, it's necessary to add jython to the classpath. To do so, run OmegaT with this command:
 
 ```java -cp "/path/to/OmegaT/installation/folder/OmegaT.jar:/path/to/OmegaT/installation/folder/lib/*:/path/to/jython.jar" org.omegat.Main```
@@ -15,8 +16,10 @@ somewhere after the lines that enable Groovy and JavaScript, and then build with
 ```./gradlew installDist```
 
 A sample jython script is provided [here](https://github.com/kosivantsov/omegat_scripts/blob/master/aux_scripts/jython_test.py).
+</details>
 
 ## Customization script [`updateConfigBundle.groovy`]
+<details>
 
 ### Customization
 
@@ -103,3 +106,4 @@ The user can reach that folder in two ways:
 #### Where is the installation folder
 
 On a 64-bit machine under Windows 10, it is by default on path `C:\Program Files\OmegaT`.
+</details>

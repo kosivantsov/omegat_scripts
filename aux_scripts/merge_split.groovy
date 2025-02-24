@@ -2,8 +2,8 @@
  *         Merge current segment with the next or split it at the cursor (if in source text)
  *
  * @author  Yu Tang, Kos Ivantsov
- * @date    2025-02-21
- * @version 1.6
+ * @date    2025-02-24
+ * @version 1.6.1
  */
 
 import java.awt.BorderLayout
@@ -46,6 +46,10 @@ resBundle = { k,v, Object... vars ->
         utils.format(v, *vars)
     }
 }
+// Main window
+omtWindow = mainWindow.getApplicationFrame()
+editorPane = SwingUtilities.getWindowAncestor(editor.editor) // place dialogs in the center of the Editor pane
+
 
 //// UI Strings
 name = "Merge or split segments"
@@ -75,7 +79,7 @@ if (! project.isProjectLoaded()) {
     message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
     final def msg = message
     final def title = resBundle("name", name)
-    showMessageDialog null, msg, title, INFORMATION_MESSAGE
+    showMessageDialog omtWindow, msg, title, INFORMATION_MESSAGE
     console.println(message)
     return
 }
@@ -245,9 +249,11 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     // register new rule to the segmentation
     mapRule.rules[0..<0] = rule // Appends a new rule to the head of List.
 
-    if (showConfirmDialog(null, OStrings.getString("MW_REOPEN_QUESTION"),
+    if (showConfirmDialog(omtWindow, OStrings.getString("MW_REOPEN_QUESTION"),
         OStrings.getString("MW_REOPEN_TITLE"), JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
         org.omegat.gui.main.ProjectUICommands.projectReload()
+        reload
+        return
     } else {
         console.print(resBundle("noReload", noReload))
         return
@@ -403,7 +409,6 @@ void initializeScript() {
     result = getActions()
     split = result[0]
     merge = result[1]
-    mainWindow  =  SwingUtilities.getRoot(editor.editor) // place dialogs in the center of the Editor pane
 
     // String class
     String.metaClass.toXML = { ->
@@ -413,7 +418,7 @@ void initializeScript() {
         escapeNonRegex(delegate as String)
     }
     String.metaClass.alert = { ->
-        showMessageDialog mainWindow, delegate, split ? resBundle("splitTitle", splitTitle) : resBundle("mergeTitle", mergeTitle), INFORMATION_MESSAGE
+        showMessageDialog editorPane, delegate, split ? resBundle("splitTitle", splitTitle) : resBundle("mergeTitle", mergeTitle), INFORMATION_MESSAGE
         false
     }
     String.metaClass.confirm = { ->
@@ -424,7 +429,7 @@ void initializeScript() {
         panel.setPreferredSize(bestSize)
         label = new JLabel(text)
         panel.add(label, "North")
-        pane.showConfirmDialog(mainWindow, panel, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
+        pane.showConfirmDialog(editorPane, panel, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
     }
 
     // SRX class

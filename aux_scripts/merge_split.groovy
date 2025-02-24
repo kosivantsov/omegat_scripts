@@ -1,9 +1,9 @@
 /* :name=  Merge or split segments :description= \
  *         Merge current segment with the next or split it at the cursor (if in source text)
- * 
+ *
  * @author  Yu Tang, Kos Ivantsov
- * @date    2024-09-10
- * @version 1.5
+ * @date    2025-02-21
+ * @version 1.6
  */
 
 import java.awt.BorderLayout
@@ -11,12 +11,13 @@ import java.awt.Dimension
 import javax.swing.JLabel
 import javax.swing.JOptionPane
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 import org.omegat.core.data.ProtectedPart
-import org.omegat.core.segmentation.datamodels.MappingRulesModel
 import org.omegat.core.segmentation.MapRule
 import org.omegat.core.segmentation.Rule
 import org.omegat.core.segmentation.SRX
+import org.omegat.core.segmentation.datamodels.MappingRulesModel
 import org.omegat.util.Language
 import org.omegat.util.OStrings
 import org.omegat.util.Preferences
@@ -33,38 +34,42 @@ showTags            = true   //if false, tags won't be shown in the confirmation
 paintTags           = true   //if true, tags will be shown in different font size and color
 tagColor            = "gray" //tag color
 tagSize             = 1      //tag size
+mapRuleName         = "MergeSplit" //name of the rule set for segmentation rules created by the script
 
 //// External resources hack (use hardcoded strings if .properties file isn't found)
-resBundle = { k,v ->
+utils = (StringUtil.getMethods().toString().findAll("format")) ? StringUtil : StaticUtils
+resBundle = { k,v, Object... vars ->
     try {
-        v = res.getString(k)
+        v = utils.format(res.getString(k), *vars)
     }
     catch (MissingResourceException e) {
-        v
+        utils.format(v, *vars)
     }
 }
 
 //// UI Strings
 name = "Merge or split segments"
-description = "Merge current segment with the next, or split it at the cursor location"
+description = "Merge current segment with the next, or split it at the cursor position"
 
-srxEnabled = "Project-specific segmentation rules have been enabled.\nRun the script again after the project is reloaded."
-noNewRule = "No new rule added." 
-newSegmentationActive = "New segmentation rule activated."
-splitMessage = "Split result:" 
-mergeMessage = "Merge result:" 
-proceed = "Add this rule?"
-noMappingRule = "MappingRule for the source language is not found."
-ruleExists = "This rule already exists." 
-terminating = " Terminating now!"
-noReload = "New rule added, but it will be activated only after the project is reloaded."
-noProjectOpen = "No project open!" 
-noProjectSegmentation = "The script works only with the project-specific segmentation rules!" 
-noMerge = "Merging with the next segment is not possible!" 
-noSplit = "Split point should not be at the beginning or the end of the source text!"
-inTag = "Split point cannot be inside a tag!" 
+createSeparateRule = "Creating a new set \"{0}\" to save the new segmentation rule."
+inTag = "Split point cannot be inside a tag!"
+mergeMessage = "Merge result:"
 mergeTitle="Merging Segments"
-splitTitle="Splitting Current Segment"
+newSegmentationActive = "New segmentation rule activated."
+noMappingRule = "No set of segmentation rules found for the project source language."
+noMerge = "Merging with the next segment is not possible!"
+noNewRule = "No new rule added."
+noProjectOpen = "No project open!"
+noProjectSegmentation = "The script works only with the project-specific segmentation rules!"
+noReload = "New rule added, but it will be activated only after the project is reloaded."
+noSplit = "Split point should not be at the beginning or the end of the source text!"
+proceed = "Add this rule?"
+ruleExists = "This rule already exists."
+selectedRule = "Segmentation rules will be saved in the set named \"{0}\"."
+splitMessage = "Split result:"
+splitTitle = "Splitting Current Segment"
+srxEnabled = "Project-specific segmentation rules have been enabled.\nRun the script again after the project is reloaded."
+terminating = " Terminating now!"
 
 if (! project.isProjectLoaded()) {
     message = resBundle("noProjectOpen", noProjectOpen) + resBundle("terminating", terminating)
@@ -134,21 +139,62 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
         return
     }
     srx = project.projectProperties.getProjectSRX()
+    rulesModel = new MappingRulesModel(srx)
 
     // check for the MappingRule
-    Language srcLang = project.projectProperties.sourceLanguage
+    srcLang = project.projectProperties.sourceLanguage
     srcCode = srcLang.getLanguageCode().toUpperCase()
+    mapRule = false//this will be either rule set $mapRuleName or the first rule set matching the project source language
+    mappingRulesNumber = rulesModel.getRowCount()
+    mapRuleRow = -1
+    mapRuleFound = false
+    def selectedRuleName
     if (separateMappingRule) {
-        mergeSplitMapRule = new MapRule("MergeSplit", "$srcCode.*", new ArrayList<>())
-        if (! srx.getMappingRules()[0].toString().contains("MergeSplit ($srcCode.*)")) {
-            srx.getMappingRules().add(0, mergeSplitMapRule)
+        for (i = 0; i < mappingRulesNumber; i++) {
+            if ((rulesModel.getValueAt(i, 0) == mapRuleName) && (rulesModel.getValueAt(i, 1).toUpperCase() == srcLang.toString().toUpperCase())) {
+                mapRuleFound = true
+                mapRuleRow = mapRuleRow == -1 ? i : mapRuleRow
+            }
         }
+
+        if (!mapRuleFound) {
+            message = resBundle("createSeparateRule", createSeparateRule, mapRuleName)
+            console.println(message)
+            rulesModel.addRow()
+            srx = project.projectProperties.getProjectSRX()
+            rulesModel = new MappingRulesModel(srx)
+            rulesModel.setValueAt(mapRuleName.toString(), mappingRulesNumber, 0)
+            rulesModel.setValueAt(srcLang.toString().toUpperCase(), mappingRulesNumber, 1)
+            r = rulesModel.getRowCount() - 1
+            while (r > 0) {
+                rulesModel.moveRowUp(r)
+                r--
+            }
+            mapRule = srx.getMappingRules().get(0)
+            selectedRuleName = rulesModel.getValueAt(0, 0)
+        } else {
+            mapRule = srx.getMappingRules().get(mapRuleRow)
+            selectedRuleName = rulesModel.getValueAt(mapRuleRow, 0)
+        }
+    } else {
+        for (i = 0; i < mappingRulesNumber; i++) {
+            if ((rulesModel.getValueAt(i, 1).toUpperCase().startsWith(srcCode.toUpperCase() + '.*')) || (rulesModel.getValueAt(i, 1).toUpperCase() == srcLang.toString().toUpperCase())) {
+                mapRuleFound = true
+                mapRuleRow = mapRuleRow == -1 ? i : mapRuleRow
+            }
+        }
+        mapRule = mapRuleFound ? srx.getMappingRules().get(mapRuleRow) : null
+        selectedRuleName = mapRuleFound ? rulesModel.getValueAt(mapRuleRow, 0) : 0
     }
-    def mapRule = project.projectProperties.projectSRX.findMappingRule(srcLang)
+
     if (! mapRule) {
         message = resBundle("noMappingRule", noMappingRule) + resBundle("terminating", terminating)
+        console.println(message)
         message.alert()
         return
+    } else {
+        message = resBundle("selectedRule", selectedRule, "$selectedRuleName")
+        console.println(message)
     }
 
     // show confirm dialog
@@ -158,11 +204,9 @@ org.omegat.util.gui.UIThreadsUtil.executeInSwingThread {
     }
 
     String message = split ?
-    //"""<html><hr/><i><b>${beforeBreakMsg}</b></i><br/><hr/><i><b>${afterBreakMsg}</b></i><hr/><br/><br/><br/>""" + resBundle("proceed", proceed) + "</html>" :
-    //"""<html><hr/><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i><hr/><br/><br/><br/>""" + resBundle("proceed", proceed) + "</html>"
     """<html>${resBundle("proceed", proceed)}<br/><br/><hr/><i><b>${beforeBreakMsg}</b></i><br/><hr/><i><b>${afterBreakMsg}</b></i><hr/></html>""" :
     """<html>${resBundle("proceed", proceed)}<br/><br/><hr/><i><b>${beforeBreakMsg}${separator}${afterBreakMsg}</b></i><hr/><br/><br/><br/>"""
-    
+
     if (message.confirm() != 0) {
         console.clear()
         console.println(resBundle("noNewRule", noNewRule))
@@ -270,7 +314,7 @@ public static String escapeNonRegex(String text, boolean escapeWildcards) {
         text = text.replaceAll("\\*", "\\\\S*")
     }
     //make tags optional
-    text = text.replaceAll(/(\\\<\/?\w+\d+\s?\/?\\\>)/, /\($1\)\?/) 
+    text = text.replaceAll(/(\\\<\/?\w+\d+\s?\/?\\\>)/, /\($1\)\?/)
     return text
 }
 
@@ -283,7 +327,7 @@ def getActions() {
     srcStart = srcEnd - src.size()
     srcRange = srcStart+1..srcEnd-1
     //if the caret is in the source text of the current segment, we split
-    split = srcRange.contains(position) ? true : false    
+    split = srcRange.contains(position) ? true : false
     //if next segment starts a new paragraph or there's no next segment, we refuse to merge
     def nextEntry = project.allEntries[entry.entryNum()] ? project.allEntries[entry.entryNum()] : null
     if (!nextEntry) {
@@ -334,7 +378,7 @@ boolean isReadyForNewRule() {
     merge = result[1]
     boundary = result[2]
     intag = result[3]
-    
+
     if (boundary) {
         message = resBundle("noSplit", noSplit) + resBundle("terminating", terminating)
         console.println message
@@ -349,7 +393,6 @@ boolean isReadyForNewRule() {
     if (intag) {
         message = resBundle("inTag", inTag) + resBundle("terminating", terminating)
         return message.alert()
-        
     }
 
     // OK
@@ -360,6 +403,7 @@ void initializeScript() {
     result = getActions()
     split = result[0]
     merge = result[1]
+    mainWindow  =  SwingUtilities.getRoot(editor.editor) // place dialogs in the center of the Editor pane
 
     // String class
     String.metaClass.toXML = { ->
@@ -369,7 +413,7 @@ void initializeScript() {
         escapeNonRegex(delegate as String)
     }
     String.metaClass.alert = { ->
-        showMessageDialog null, delegate, split ? resBundle("splitTitle", splitTitle) : resBundle("mergeTitle", mergeTitle), INFORMATION_MESSAGE
+        showMessageDialog mainWindow, delegate, split ? resBundle("splitTitle", splitTitle) : resBundle("mergeTitle", mergeTitle), INFORMATION_MESSAGE
         false
     }
     String.metaClass.confirm = { ->
@@ -378,10 +422,9 @@ void initializeScript() {
         text = delegate
         bestSize = new Dimension((text.size() < 370 ? 350 : text.size().intdiv(2) + 100 ), (text.size() < 370 ? 250 : text.size().intdiv(3) + 100))
         panel.setPreferredSize(bestSize)
-	   label = new JLabel(text)
-	   panel.add(label, "North")
-        pane.showConfirmDialog(null, panel, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
-        //showConfirmDialog( null, delegate, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
+        label = new JLabel(text)
+        panel.add(label, "North")
+        pane.showConfirmDialog(mainWindow, panel, split ? resBundle("splitMessage", splitMessage) : resBundle("mergeMessage", mergeMessage), YES_NO_OPTION)
     }
 
     // SRX class
